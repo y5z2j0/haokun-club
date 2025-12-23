@@ -66,7 +66,7 @@
             margin-bottom: 20px;
             text-shadow: 0 0 3px #00ffff;
         }
-        /* 身份选择标签（修复点击无效） */
+        /* 身份选择标签 */
         .identity-tabs {
             display: flex;
             gap: 10px;
@@ -170,6 +170,12 @@
             color: #00ff00;
             font-size: 14px;
             margin-top: 5px;
+        }
+        .player-bind-tip {
+            color: #ffd700;
+            font-size: 12px;
+            margin-top: 8px;
+            text-shadow: 0 0 2px #ffd700;
         }
         .status-btn-group {
             display: flex;
@@ -303,6 +309,10 @@
             background-color: #ff6600;
             color: #fff;
         }
+        .status-finished {
+            background-color: #8a2be2;
+            color: #fff;
+        }
         .grab-btn {
             width: 100%;
             height: 35px;
@@ -315,7 +325,19 @@
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .grab-btn:active {
+        .finish-btn {
+            width: 100%;
+            height: 35px;
+            margin-top: 10px;
+            background-color: #8a2be2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .grab-btn:active, .finish-btn:active {
             transform: scale(0.97);
             box-shadow: 0 0 8px #00ffff;
         }
@@ -397,6 +419,55 @@
         .chat-send-btn:active {
             transform: scale(0.95);
         }
+        /* 评价模块 */
+        .rating-section {
+            margin: 25px 0;
+            padding: 15px;
+            background-color: #1a0736;
+            border-radius: 12px;
+            border: 1px solid #00ffff;
+        }
+        .rating-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .rating-stat-item {
+            color: #fff;
+        }
+        .rating-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .rating-label {
+            font-size: 12px;
+            color: #888;
+        }
+        .rating-list {
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .rating-item {
+            padding: 10px 0;
+            border-bottom: 1px dashed rgba(0,255,255,0.2);
+            color: #fff;
+            font-size: 14px;
+        }
+        .rating-star {
+            color: #ffd700;
+            margin: 5px 0;
+        }
+        .rating-content {
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+        .rating-time {
+            color: #888;
+            font-size: 12px;
+        }
         /* 管理员模块 */
         .admin-login-panel {
             text-align: center;
@@ -463,6 +534,11 @@
             background: linear-gradient(90deg, #ff6600, #ff0000);
             border-color: #ff0000;
         }
+        .admin-btn.success {
+            background: linear-gradient(90deg, #00ff00, #00ffff);
+            color: #000;
+            font-weight: bold;
+        }
         .admin-tip {
             color: #ff6600;
             font-size: 12px;
@@ -527,6 +603,70 @@
             background-color: rgba(0,0,0,0.7);
             z-index: 9998;
         }
+        /* 评价弹窗 */
+        .rating-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 300px;
+            background-color: #0a0218;
+            border: 2px solid #ff00ff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 20px #ff00ff;
+            z-index: 9999;
+        }
+        .rating-modal-title {
+            color: #ff00ff;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .star-group {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        .star-btn {
+            font-size: 24px;
+            color: #333;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .star-btn.active {
+            color: #ffd700;
+            text-shadow: 0 0 8px #ffd700;
+        }
+        .rating-input {
+            width: 100%;
+            height: 80px;
+            background-color: #1a0736;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            padding: 10px;
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 15px;
+            outline: none;
+            resize: none;
+        }
+        .rating-submit-btn {
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(90deg, #8a2be2, #ff00ff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -534,7 +674,7 @@
         <h1 class="title">好困俱乐部</h1>
         <p class="sub-title">陪玩端+管理员系统</p>
         
-        <!-- 身份选择标签（修复点击无效） -->
+        <!-- 身份选择标签 -->
         <div class="identity-tabs">
             <div class="identity-tab active" data-role="player">陪玩登录</div>
             <div class="identity-tab" data-role="admin">管理员登录</div>
@@ -552,6 +692,7 @@
                 <img src="https://via.placeholder.com/80" class="player-avatar" id="playerAvatar">
                 <div class="player-name" id="playerName">陪玩名称</div>
                 <div class="player-status" id="playerStatus">当前状态：在线</div>
+                <div class="player-bind-tip" id="playerBindTip">✅ 设备已绑定，下次免密登录</div>
             </div>
             
             <div class="status-btn-group">
@@ -590,6 +731,28 @@
                     <button class="chat-send-btn" onclick="sendPlayerMessage()" disabled>发送</button>
                 </div>
             </div>
+            
+            <!-- 评价模块 -->
+            <div class="rating-section">
+                <h3 class="section-title">我的评价</h3>
+                <div class="rating-stats">
+                    <div class="rating-stat-item">
+                        <div class="rating-count" id="goodRatingCount">0</div>
+                        <div class="rating-label">好评</div>
+                    </div>
+                    <div class="rating-stat-item">
+                        <div class="rating-count" id="badRatingCount">0</div>
+                        <div class="rating-label">差评</div>
+                    </div>
+                    <div class="rating-stat-item">
+                        <div class="rating-count" id="totalRatingCount">0</div>
+                        <div class="rating-label">总评价</div>
+                    </div>
+                </div>
+                <div class="rating-list" id="playerRatingList">
+                    <div class="empty-tip">暂无评价记录</div>
+                </div>
+            </div>
         </div>
         
         <!-- 管理员登录面板 -->
@@ -617,6 +780,7 @@
                     <input type="text" class="input-box" id="newPlayerName" placeholder="输入新的陪玩名称">
                     <button class="admin-btn" onclick="updatePlayerNickname()">修改陪玩名称</button>
                     <button class="admin-btn" onclick="updatePlayerStatusByAdmin()">修改陪玩状态</button>
+                    <button class="admin-btn success" onclick="unbindPlayerDevice()">解除设备绑定</button>
                     <button class="admin-btn warning" onclick="resetPlayerData()">重置陪玩数据（订单/统计）</button>
                 </div>
                 <div class="admin-tip">修改后陪玩需重新登录生效</div>
@@ -653,6 +817,22 @@
         <h3 class="modal-title">订单详情</h3>
         <div class="modal-content" id="orderDetailContent"></div>
     </div>
+    
+    <!-- 评价弹窗 -->
+    <div class="modal-overlay" id="ratingModalOverlay"></div>
+    <div class="rating-modal" id="ratingModal">
+        <div class="modal-close" onclick="closeRatingModal()">×</div>
+        <h3 class="rating-modal-title">订单评价</h3>
+        <div class="star-group">
+            <button class="star-btn" onclick="selectRatingStar(1)">★</button>
+            <button class="star-btn" onclick="selectRatingStar(2)">★</button>
+            <button class="star-btn" onclick="selectRatingStar(3)">★</button>
+            <button class="star-btn" onclick="selectRatingStar(4)">★</button>
+            <button class="star-btn" onclick="selectRatingStar(5)">★</button>
+        </div>
+        <textarea class="rating-input" id="ratingContent" placeholder="请输入评价内容..."></textarea>
+        <button class="rating-submit-btn" onclick="submitRating()">提交评价</button>
+    </div>
 
     <script>
         // 核心配置
@@ -664,6 +844,7 @@
             '150', '151', '152', '157', '158', '159', '182', '183', '184', '187', '188'
         ];
         const VIOLATION_FINE = 10;
+        const DEVICE_ID = generateDeviceId(); // 设备唯一标识
         
         // 全局状态（从本地存储加载）
         let currentRole = 'player';
@@ -674,17 +855,31 @@
         let playerNotifications = [];
         let currentChatOrder = '';
         let playerViolations = {};
+        let playerRatings = {}; // 陪玩评价记录
+        let selectedRatingStar = 0;
+        let currentRatingOrder = '';
         
         // 本地存储键名
         const STORAGE_KEYS = {
             playerList: 'hk_club_player_list',
             orderList: 'hk_club_order_list',
-            playerViolations: 'hk_club_player_violations'
+            playerViolations: 'hk_club_player_violations',
+            playerRatings: 'hk_club_player_ratings',
+            boundDevices: 'hk_club_bound_devices' // 设备绑定记录
         };
+        
+        // 生成设备唯一标识
+        function generateDeviceId() {
+            const uuid = localStorage.getItem('hk_device_id');
+            if (uuid) return uuid;
+            const newUuid = 'dev_' + Math.random().toString(36).substr(2, 10);
+            localStorage.setItem('hk_device_id', newUuid);
+            return newUuid;
+        }
         
         // 页面加载初始化（优先加载本地数据）
         window.addEventListener('DOMContentLoaded', function() {
-            // 修复：直接绑定身份标签点击事件（无延迟）
+            // 绑定身份标签点击事件
             document.querySelectorAll('.identity-tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const role = this.getAttribute('data-role');
@@ -694,6 +889,7 @@
             
             loadDataFromLocalStorage();
             initSystem();
+            checkBoundDevice(); // 检查设备是否已绑定
         });
         
         // 从本地存储加载数据（退出不丢失）
@@ -704,18 +900,27 @@
                 
                 const storedOrders = localStorage.getItem(STORAGE_KEYS.orderList);
                 if (storedOrders) orderList = JSON.parse(storedOrders);
+                else orderList = []; // 删除测试订单，初始为空
                 
                 const storedViolations = localStorage.getItem(STORAGE_KEYS.playerViolations);
                 if (storedViolations) playerViolations = JSON.parse(storedViolations);
                 
+                const storedRatings = localStorage.getItem(STORAGE_KEYS.playerRatings);
+                if (storedRatings) playerRatings = JSON.parse(storedRatings);
+                else initPlayerRatings();
+                
+                const storedBoundDevices = localStorage.getItem(STORAGE_KEYS.boundDevices);
+                if (!storedBoundDevices) localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify({}));
+                
                 if (!storedPlayers) generatePlayerList();
-                if (!storedOrders) mockTestOrders();
                 if (!storedViolations) initPlayerViolations();
             } catch (e) {
                 console.error('加载本地数据失败：', e);
                 generatePlayerList();
-                mockTestOrders();
+                orderList = [];
                 initPlayerViolations();
+                initPlayerRatings();
+                localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify({}));
             }
         }
         
@@ -725,6 +930,7 @@
                 localStorage.setItem(STORAGE_KEYS.playerList, JSON.stringify(playerList));
                 localStorage.setItem(STORAGE_KEYS.orderList, JSON.stringify(orderList));
                 localStorage.setItem(STORAGE_KEYS.playerViolations, JSON.stringify(playerViolations));
+                localStorage.setItem(STORAGE_KEYS.playerRatings, JSON.stringify(playerRatings));
             } catch (e) {
                 console.error('保存本地数据失败：', e);
             }
@@ -761,34 +967,20 @@
             saveDataToLocalStorage();
         }
         
-        // 模拟测试订单
-        function mockTestOrders() {
-            orderList = [
-                {
-                    orderNo: 'HK250601123456',
-                    service: '古城极限（包装备-单局）',
-                    bossContact: '微信：boss888',
-                    status: '待接单',
-                    createTime: '2025-06-01 10:23:45',
-                    playerId: '',
-                    playerName: '未分配',
-                    chatRecords: []
-                },
-                {
-                    orderNo: 'HK250601654321',
-                    service: '4队技术服务（1小时）',
-                    bossContact: '电话：138xxxx1234',
-                    status: '待接单',
-                    createTime: '2025-06-01 11:05:12',
-                    playerId: '',
-                    playerName: '未分配',
-                    chatRecords: []
-                }
-            ];
+        // 初始化评价记录
+        function initPlayerRatings() {
+            playerList.forEach(player => {
+                playerRatings[player.id] = {
+                    total: 0,
+                    good: 0,
+                    bad: 0,
+                    list: []
+                };
+            });
             saveDataToLocalStorage();
         }
         
-        // 切换角色（修复核心bug：简化逻辑，直接操作DOM）
+        // 切换角色
         function switchRole(role) {
             currentRole = role;
             
@@ -806,6 +998,7 @@
             if (role === 'player') {
                 if (loginPlayer) {
                     document.querySelector('.player-function-panel').classList.add('active');
+                    renderPlayerRatings(); // 渲染评价
                 } else {
                     document.querySelector('.player-login-panel').classList.add('active');
                 }
@@ -818,7 +1011,34 @@
             }
         }
         
-        // 陪玩登录
+        // 检查设备是否已绑定
+        function checkBoundDevice() {
+            const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
+            for (const [playerId, deviceId] of Object.entries(boundDevices)) {
+                if (deviceId === DEVICE_ID) {
+                    // 设备已绑定，自动登录
+                    const targetPlayer = playerList.find(p => p.id === playerId);
+                    if (targetPlayer) {
+                        loginPlayer = targetPlayer;
+                        document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+                        document.querySelector('.player-function-panel').classList.add('active');
+                        document.getElementById('playerAvatar').src = targetPlayer.avatar;
+                        document.getElementById('playerName').innerText = targetPlayer.name;
+                        updatePlayerStatusDisplay();
+                        renderPlayerOrders();
+                        initPlayerChatSelect();
+                        renderPlayerRatings();
+                        
+                        alert(`✅ 设备已绑定，${targetPlayer.name}自动登录成功！`);
+                        return;
+                    }
+                }
+            }
+            // 未绑定，隐藏绑定提示
+            document.getElementById('playerBindTip').style.display = 'none';
+        }
+        
+        // 陪玩登录（新增设备绑定）
         function playerLogin() {
             const inputPwd = document.getElementById('playerLoginPwd').value.trim();
             if (!inputPwd) {
@@ -829,21 +1049,28 @@
             const targetPlayer = playerList.find(player => player.password === inputPwd);
             if (targetPlayer) {
                 loginPlayer = targetPlayer;
+                // 绑定设备
+                const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
+                boundDevices[targetPlayer.id] = DEVICE_ID;
+                localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify(boundDevices));
+                
                 document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
                 document.querySelector('.player-function-panel').classList.add('active');
                 document.getElementById('playerAvatar').src = targetPlayer.avatar;
                 document.getElementById('playerName').innerText = targetPlayer.name;
+                document.getElementById('playerBindTip').style.display = 'block';
                 updatePlayerStatusDisplay();
                 renderPlayerOrders();
                 initPlayerChatSelect();
+                renderPlayerRatings();
                 
-                alert(`✅ ${targetPlayer.name}登录成功！`);
+                alert(`✅ ${targetPlayer.name}登录成功！设备已绑定，下次免密登录`);
             } else {
                 alert('❌ 密码错误！');
             }
         }
         
-        // 管理员登录（修复后可正常登录）
+        // 管理员登录
         function adminLogin() {
             const inputPwd = document.getElementById('adminLoginPwd').value.trim();
             if (inputPwd === ADMIN_PASSWORD) {
@@ -856,7 +1083,27 @@
             }
         }
         
-        // 修复：重置订单数据（有效且实时保存）
+        // 解除设备绑定（管理员功能）
+        function unbindPlayerDevice() {
+            const playerId = document.getElementById('adminPlayerSelect').value;
+            if (!playerId) {
+                alert('请选择要解除绑定的陪玩');
+                return;
+            }
+            
+            const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
+            if (boundDevices[playerId]) {
+                delete boundDevices[playerId];
+                localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify(boundDevices));
+                
+                const targetPlayer = playerList.find(p => p.id === playerId);
+                alert(`✅ 已解除陪玩【${targetPlayer.name}】的设备绑定`);
+            } else {
+                alert('❌ 该陪玩未绑定任何设备');
+            }
+        }
+        
+        // 重置订单数据
         function resetPlayerData() {
             const playerId = document.getElementById('adminPlayerSelect').value;
             if (!playerId) {
@@ -874,7 +1121,7 @@
             }
         }
         
-        // 修复：订单号可点击（显示详情）
+        // 显示订单详情
         function showOrderDetail(orderNo) {
             const targetOrder = orderList.find(order => order.orderNo === orderNo);
             if (!targetOrder) return;
@@ -884,7 +1131,7 @@
                 服务类型：${targetOrder.service}<br>
                 老板联系方式：${targetOrder.bossContact}<br>
                 接单陪玩：${targetOrder.playerName || '未分配'}<br>
-                订单状态：${targetOrder.status === '待接单' ? '待接单' : '接单中'}<br>
+                订单状态：${targetOrder.status === '待接单' ? '待接单' : targetOrder.status === '进行中' ? '接单中' : '已完成'}<br>
                 创建时间：${targetOrder.createTime}
             `;
             
@@ -899,7 +1146,7 @@
             document.getElementById('modalOverlay').style.display = 'none';
         }
         
-        // 渲染陪玩订单列表（添加点击事件）
+        // 渲染陪玩订单列表
         function renderPlayerOrders() {
             if (!loginPlayer) return;
             
@@ -920,17 +1167,19 @@
                     <div class="order-info">服务：${order.service}</div>
                     <div class="order-info">老板：${order.bossContact}</div>
                     <div class="order-info">时间：${order.createTime}</div>
-                    <div class="order-status ${order.status === '待接单' ? 'status-wait' : 'status-doing'}">
-                        ${order.status === '待接单' ? '待接单' : '接单中'}
+                    <div class="order-status ${order.status === '待接单' ? 'status-wait' : order.status === '进行中' ? 'status-doing' : 'status-finished'}">
+                        ${order.status === '待接单' ? '待接单' : order.status === '进行中' ? '接单中' : '已完成'}
                     </div>
                     ${!isMyOrder && order.status === '待接单' && loginPlayer.status === 'online' ? 
                         `<button class="grab-btn" onclick="event.stopPropagation(); grabPlayerOrder('${order.orderNo}')">抢单</button>` : ''}
+                    ${isMyOrder && order.status === '进行中' ? 
+                        `<button class="finish-btn" onclick="event.stopPropagation(); showRatingModal('${order.orderNo}')">结单</button>` : ''}
                 </div>`;
             });
             document.getElementById('playerOrderList').innerHTML = orderHtml;
         }
         
-        // 陪玩抢单（实时保存）
+        // 陪玩抢单
         function grabPlayerOrder(orderNo) {
             if (!loginPlayer || loginPlayer.status !== 'online') {
                 alert('❌ 你当前不在线，无法抢单');
@@ -960,7 +1209,108 @@
             alert(`✅ 抢单成功！\n订单号：${orderNo}`);
         }
         
-        // 其他核心功能（保持不变，新增实时保存）
+        // 显示评价弹窗
+        function showRatingModal(orderNo) {
+            currentRatingOrder = orderNo;
+            selectedRatingStar = 0;
+            document.getElementById('ratingContent').value = '';
+            document.querySelectorAll('.star-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById('ratingModal').style.display = 'block';
+            document.getElementById('ratingModalOverlay').style.display = 'block';
+        }
+        
+        // 关闭评价弹窗
+        function closeRatingModal() {
+            document.getElementById('ratingModal').style.display = 'none';
+            document.getElementById('ratingModalOverlay').style.display = 'none';
+        }
+        
+        // 选择星级
+        function selectRatingStar(starCount) {
+            selectedRatingStar = starCount;
+            document.querySelectorAll('.star-btn').forEach((btn, index) => {
+                btn.classList.toggle('active', index < starCount);
+            });
+        }
+        
+        // 提交评价（结单）
+        function submitRating() {
+            if (selectedRatingStar === 0) {
+                alert('请选择评价星级');
+                return;
+            }
+            
+            const content = document.getElementById('ratingContent').value.trim() || '无评价内容';
+            const targetOrder = orderList.find(order => order.orderNo === currentRatingOrder);
+            if (!targetOrder) {
+                alert('订单已失效');
+                closeRatingModal();
+                return;
+            }
+            
+            // 更新订单状态
+            targetOrder.status = '已完成';
+            targetOrder.finishTime = new Date().toLocaleString();
+            
+            // 更新陪玩状态为在线
+            loginPlayer.status = 'online';
+            updatePlayerStatusDisplay();
+            
+            // 记录评价
+            const isGoodRating = selectedRatingStar >= 4;
+            playerRatings[loginPlayer.id].total++;
+            isGoodRating ? playerRatings[loginPlayer.id].good++ : playerRatings[loginPlayer.id].bad++;
+            playerRatings[loginPlayer.id].list.unshift({
+                orderNo: currentRatingOrder,
+                star: selectedRatingStar,
+                content: content,
+                isGood: isGoodRating,
+                time: new Date().toLocaleString()
+            });
+            
+            // 从陪玩订单列表移除
+            loginPlayer.orders = loginPlayer.orders.filter(o => o.orderNo !== currentRatingOrder);
+            
+            saveDataToLocalStorage();
+            renderPlayerOrders();
+            renderPlayerRatings();
+            initPlayerChatSelect();
+            closeRatingModal();
+            
+            addPlayerNotification(`✅ 订单${currentRatingOrder}结单成功！\n评价：${isGoodRating ? '好评' : '差评'}（${selectedRatingStar}星）`, currentRatingOrder);
+            sendAdminNotification(`【订单结单】\n订单号：${currentRatingOrder}\n陪玩：${loginPlayer.name}\n评价：${isGoodRating ? '好评' : '差评'}（${selectedRatingStar}星）`);
+            
+            alert('✅ 结单成功！已自动切换为在线状态');
+        }
+        
+        // 渲染陪玩评价
+        function renderPlayerRatings() {
+            if (!loginPlayer) return;
+            
+            const ratings = playerRatings[loginPlayer.id];
+            document.getElementById('goodRatingCount').innerText = ratings.good;
+            document.getElementById('badRatingCount').innerText = ratings.bad;
+            document.getElementById('totalRatingCount').innerText = ratings.total;
+            
+            if (ratings.list.length === 0) {
+                document.getElementById('playerRatingList').innerHTML = '<div class="empty-tip">暂无评价记录</div>';
+                return;
+            }
+            
+            let ratingHtml = '';
+            ratings.list.forEach(rating => {
+                ratingHtml += `<div class="rating-item">
+                    <div class="order-no">订单号：${rating.orderNo}</div>
+                    <div class="rating-star">${'★'.repeat(rating.star)}${'☆'.repeat(5 - rating.star)} ${rating.isGood ? '好评' : '差评'}</div>
+                    <div class="rating-content">${rating.content}</div>
+                    <div class="rating-time">${rating.time}</div>
+                </div>`;
+            });
+            document.getElementById('playerRatingList').innerHTML = ratingHtml;
+        }
+        
+        // 更新陪玩状态
         function updatePlayerStatus(status) {
             if (!loginPlayer) return;
             loginPlayer.status = status;
@@ -969,6 +1319,7 @@
             sendAdminNotification(`【陪玩状态更新】\n陪玩：${loginPlayer.name}\n新状态：${getStatusText(status)}`);
         }
         
+        // 更新陪玩状态显示
         function updatePlayerStatusDisplay() {
             const statusText = getStatusText(loginPlayer.status);
             const statusColor = { online: '#00ff00', busy: '#ff6600', offline: '#888' };
@@ -976,11 +1327,13 @@
             document.getElementById('playerStatus').style.color = statusColor[loginPlayer.status];
         }
         
+        // 获取状态文本
         function getStatusText(status) {
             const statusMap = { online: '在线', busy: '接单中', offline: '不在线' };
             return statusMap[status] || '在线';
         }
         
+        // 初始化陪玩聊天选择框
         function initPlayerChatSelect() {
             if (!loginPlayer) return;
             
@@ -1003,6 +1356,7 @@
             document.getElementById('playerChatSelect').disabled = false;
         }
         
+        // 聊天选择框变更事件
         document.getElementById('playerChatSelect').addEventListener('change', function() {
             const orderNo = this.value;
             if (!orderNo) {
@@ -1024,6 +1378,7 @@
             }
         });
         
+        // 发送陪玩消息
         function sendPlayerMessage() {
             const content = document.getElementById('playerChatInput').value.trim();
             if (!content || !currentChatOrder) return;
@@ -1061,6 +1416,7 @@
             saveDataToLocalStorage();
         }
         
+        // 渲染聊天记录
         function renderChatRecords(records) {
             if (!records || records.length === 0) {
                 document.getElementById('playerChatList').innerHTML = '<div class="empty-tip">暂无聊天记录</div>';
@@ -1078,6 +1434,7 @@
             document.getElementById('playerChatList').scrollTop = document.getElementById('playerChatList').scrollHeight;
         }
         
+        // 添加陪玩通知
         function addPlayerNotification(content, orderNo) {
             playerNotifications.unshift({
                 id: Date.now(),
@@ -1090,6 +1447,7 @@
             renderPlayerNotifications();
         }
         
+        // 渲染陪玩通知
         function renderPlayerNotifications() {
             const unreadCount = playerNotifications.filter(notify => !notify.isRead).length;
             document.getElementById('playerNotifyCount').innerText = unreadCount;
@@ -1109,12 +1467,14 @@
             document.getElementById('playerNotifyList').innerHTML = notifyHtml;
         }
         
+        // 标记通知为已读
         function markNotifyAsRead(notifyId) {
             const notify = playerNotifications.find(n => n.id === notifyId);
             if (notify) notify.isRead = true;
             renderPlayerNotifications();
         }
         
+        // 切换管理员子模块
         function switchAdminSubmodule(submoduleId) {
             document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.admin-submodule').forEach(module => module.classList.remove('active'));
@@ -1122,6 +1482,7 @@
             document.getElementById(submoduleId + 'Submodule').classList.add('active');
         }
         
+        // 初始化管理员选择框
         function initAdminSelects() {
             let playerSelectHtml = '<option value="">请选择要管理的陪玩</option>';
             let violationSelectHtml = '<option value="">请选择违规陪玩</option>';
@@ -1135,6 +1496,7 @@
             document.getElementById('violationPlayerSelect').innerHTML = violationSelectHtml;
         }
         
+        // 修改陪玩密码
         function updatePlayerPassword() {
             const playerId = document.getElementById('adminPlayerSelect').value;
             const newPwd = document.getElementById('newPlayerPwd').value.trim();
@@ -1150,6 +1512,7 @@
             document.getElementById('newPlayerPwd').value = '';
         }
         
+        // 修改陪玩名称
         function updatePlayerNickname() {
             const playerId = document.getElementById('adminPlayerSelect').value;
             const newName = document.getElementById('newPlayerName').value.trim();
@@ -1170,6 +1533,7 @@
             initAdminSelects();
         }
         
+        // 管理员修改陪玩状态
         function updatePlayerStatusByAdmin() {
             const playerId = document.getElementById('adminPlayerSelect').value;
             if (!playerId) {
@@ -1184,6 +1548,7 @@
             alert(`✅ 陪玩【${targetPlayer.name}】状态已修改为：${getStatusText(newStatus)}`);
         }
         
+        // 管理员查询订单
         function queryOrderByAdmin() {
             const orderNo = document.getElementById('adminOrderQuery').value.trim();
             if (!orderNo) {
@@ -1202,11 +1567,12 @@
                 <div class="order-info">服务：${targetOrder.service}</div>
                 <div class="order-info">老板：${targetOrder.bossContact}</div>
                 <div class="order-info">陪玩：${targetOrder.playerName}</div>
-                <div class="order-info">状态：${targetOrder.status === '待接单' ? '待接单' : '接单中'}</div>
+                <div class="order-info">状态：${targetOrder.status === '待接单' ? '待接单' : targetOrder.status === '进行中' ? '接单中' : '已完成'}</div>
             </div>`;
             document.getElementById('adminOrderList').innerHTML = orderHtml;
         }
         
+        // 管理员警告陪玩
         function warnPlayerByAdmin() {
             const playerId = document.getElementById('violationPlayerSelect').value;
             const reason = document.getElementById('violationReason').value.trim();
@@ -1225,6 +1591,7 @@
             initAdminSelects();
         }
         
+        // 管理员罚款陪玩
         function finePlayerByAdmin() {
             const playerId = document.getElementById('violationPlayerSelect').value;
             const reason = document.getElementById('violationReason').value.trim();
@@ -1243,10 +1610,12 @@
             initAdminSelects();
         }
         
+        // 检查违规词
         function checkForbiddenWords(content) {
             return FORBIDDEN_WORDS.some(word => content.includes(word));
         }
         
+        // 发送管理员通知
         function sendAdminNotification(message) {
             if (!ADMIN_NOTIFY_SCKEY) return;
             fetch(`https://sctapi.ftqq.com/${ADMIN_NOTIFY_SCKEY}.send`, {
