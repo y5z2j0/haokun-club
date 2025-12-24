@@ -617,7 +617,7 @@
             background-color: rgba(0,0,0,0.7);
             z-index: 9998;
         }
-        /* 评价弹窗 */
+        /* 评价弹窗（保留但不使用） */
         .rating-modal {
             display: none;
             position: fixed;
@@ -796,6 +796,7 @@
                     <button class="admin-btn" onclick="updatePlayerStatusByAdmin()">修改陪玩状态</button>
                     <button class="admin-btn success" onclick="unbindPlayerDevice()">解除设备绑定</button>
                     <button class="admin-btn warning" onclick="resetPlayerData()">重置陪玩数据（订单/统计）</button>
+                    <button class="admin-btn" onclick="clearPlayerRatings()">清除陪玩评价分</button>
                 </div>
                 <div class="admin-tip">修改后陪玩需重新登录生效</div>
             </div>
@@ -832,7 +833,7 @@
         <div class="modal-content" id="orderDetailContent"></div>
     </div>
     
-    <!-- 评价弹窗 -->
+    <!-- 评价弹窗（保留但不使用） -->
     <div class="modal-overlay" id="ratingModalOverlay"></div>
     <div class="rating-modal" id="ratingModal">
         <div class="modal-close" onclick="closeRatingModal()">×</div>
@@ -1134,6 +1135,28 @@
             }
         }
         
+        // 管理员清除陪玩评价分（新增功能）
+        function clearPlayerRatings() {
+            const playerId = document.getElementById('adminPlayerSelect').value;
+            if (!playerId) {
+                alert('请选择要清除评价分的陪玩');
+                return;
+            }
+            
+            if (confirm('确定要清除该陪玩的所有评价记录吗？不可恢复！')) {
+                const targetPlayer = playerList.find(p => p.id === playerId);
+                playerRatings[playerId] = {
+                    total: 0,
+                    good: 0,
+                    bad: 0,
+                    list: []
+                };
+                saveDataToLocalStorage();
+                renderPlayerRatings(); // 实时更新陪玩端显示
+                alert(`✅ 已清除陪玩【${targetPlayer.name}】的所有评价分`);
+            }
+        }
+        
         // 显示订单详情
         function showOrderDetail(orderNo) {
             const targetOrder = orderList.find(order => order.orderNo === orderNo);
@@ -1175,6 +1198,11 @@
             let orderHtml = '';
             allOrders.forEach(order => {
                 const isMyOrder = myOrders.some(o => o.orderNo === order.orderNo);
+                // 所有待接单订单都显示抢单按钮（修复只能抢第一个的问题）
+                const showGrabBtn = !isMyOrder && order.status === '待接单' && loginPlayer.status === 'online';
+                // 已接单且进行中的订单显示结单按钮
+                const showFinishBtn = isMyOrder && order.status === '进行中';
+                
                 orderHtml += `<div class="order-item" onclick="showOrderDetail('${order.orderNo}')">
                     <div class="order-no">订单号：${order.orderNo}</div>
                     <div class="order-info">服务：${order.service}</div>
@@ -1183,19 +1211,24 @@
                     <div class="order-status ${order.status === '待接单' ? 'status-wait' : order.status === '进行中' ? 'status-doing' : 'status-finished'}">
                         ${order.status === '待接单' ? '待接单' : order.status === '进行中' ? '接单中' : '已完成'}
                     </div>
-                    ${!isMyOrder && order.status === '待接单' && loginPlayer.status === 'online' ? 
-                        `<button class="grab-btn" onclick="event.stopPropagation(); grabPlayerOrder('${order.orderNo}')">抢单</button>` : ''}
-                    ${isMyOrder && order.status === '进行中' ? 
-                        `<button class="finish-btn" onclick="event.stopPropagation(); showRatingModal('${order.orderNo}')">结单</button>` : ''}
+                    ${showGrabBtn ? `<button class="grab-btn" onclick="event.stopPropagation(); grabPlayerOrder('${order.orderNo}')">抢单</button>` : ''}
+                    ${showFinishBtn ? `<button class="finish-btn" onclick="event.stopPropagation(); finishOrderDirectly('${order.orderNo}')">结单</button>` : ''}
                 </div>`;
             });
             document.getElementById('playerOrderList').innerHTML = orderHtml;
         }
         
-        // 陪玩抢单
+        // 陪玩抢单（优化：接单后不可再抢其他单）
         function grabPlayerOrder(orderNo) {
             if (!loginPlayer || loginPlayer.status !== 'online') {
                 alert('❌ 你当前不在线，无法抢单');
+                return;
+            }
+            
+            // 检查是否已有进行中的订单（优化：避免多单并行）
+            const hasDoingOrder = loginPlayer.orders.some(o => o.status === '进行中');
+            if (hasDoingOrder) {
+                alert('❌ 你已有进行中的订单，不可同时接取多个订单');
                 return;
             }
             
@@ -1219,10 +1252,39 @@
             addPlayerNotification(`✅ 抢单成功！订单号：${orderNo}\n服务：${targetOrder.service}`, orderNo);
             sendAdminNotification(`【抢单成功】\n订单号：${orderNo}\n服务：${targetOrder.service}\n陪玩：${loginPlayer.name}\n老板：${targetOrder.bossContact}`);
             
-            alert(`✅ 抢单成功！\n订单号：${orderNo}`);
+            alert(`✅ 抢单成功！\n订单号：${orderNo}\n当前状态已切换为"接单中"，不可再接其他订单`);
         }
         
-        // 显示评价弹窗
+        // 直接结单（移除评价功能，新增方法）
+        function finishOrderDirectly(orderNo) {
+            const targetOrder = orderList.find(order => order.orderNo === orderNo);
+            if (!targetOrder) {
+                alert('订单已失效');
+                return;
+            }
+            
+            // 更新订单状态
+            targetOrder.status = '已完成';
+            targetOrder.finishTime = new Date().toLocaleString();
+            
+            // 更新陪玩状态为在线
+            loginPlayer.status = 'online';
+            updatePlayerStatusDisplay();
+            
+            // 从陪玩订单列表移除
+            loginPlayer.orders = loginPlayer.orders.filter(o => o.orderNo !== orderNo);
+            
+            saveDataToLocalStorage();
+            renderPlayerOrders();
+            initPlayerChatSelect();
+            
+            addPlayerNotification(`✅ 订单${orderNo}结单成功！`, orderNo);
+            sendAdminNotification(`【订单结单】\n订单号：${orderNo}\n陪玩：${loginPlayer.name}`);
+            
+            alert('✅ 结单成功！已自动切换为在线状态，可接新订单');
+        }
+        
+        // 显示评价弹窗（保留但不调用）
         function showRatingModal(orderNo) {
             currentRatingOrder = orderNo;
             selectedRatingStar = 0;
@@ -1239,7 +1301,7 @@
             document.getElementById('ratingModalOverlay').style.display = 'none';
         }
         
-        // 选择星级
+        // 选择星级（保留但不使用）
         function selectRatingStar(starCount) {
             selectedRatingStar = starCount;
             document.querySelectorAll('.star-btn').forEach((btn, index) => {
@@ -1247,7 +1309,7 @@
             });
         }
         
-        // 提交评价（结单）
+        // 提交评价（保留但不调用）
         function submitRating() {
             if (selectedRatingStar === 0) {
                 alert('请选择评价星级');
@@ -1624,25 +1686,3 @@
             alert(`✅ 已对陪玩【${targetPlayer.name}】罚款${VIOLATION_FINE}元\n违规原因：${reason}`);
             document.getElementById('violationReason').value = '';
             initAdminSelects();
-        }
-        
-        // 检查违规词
-        function checkForbiddenWords(content) {
-            return FORBIDDEN_WORDS.some(word => content.includes(word));
-        }
-        
-        // 发送管理员通知
-        function sendAdminNotification(message) {
-            if (!ADMIN_NOTIFY_SCKEY) return;
-            fetch(`https://sctapi.ftqq.com/${ADMIN_NOTIFY_SCKEY}.send`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: '陪玩端管理通知',
-                    desp: message.replace(/\n/g, '\n\n')
-                })
-            }).catch(err => console.log('通知失败：', err));
-        }
-    </script>
-</body>
-</html>
