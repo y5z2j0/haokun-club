@@ -94,7 +94,6 @@
             <button class="btn btn-gray" onclick="closeModal('editPlayPwdModal')">取消</button>
         </div>
     </div>
-
     <div class="tab-box">
         <button class="tab-btn active" onclick="switchTab('boss')">老板点单端</button>
         <button class="tab-btn" onclick="openPlayLogin()">陪玩接单端</button>
@@ -182,7 +181,6 @@
             <input type="text" class="input" id="bossChatInput" placeholder="禁止发联系方式">
             <button class="btn-sm" onclick="sendBossMsg()">发送</button>
         </div>
-
         <!-- 陪玩端 -->
         <div class="page" id="play">
             <div class="title">📢 待接订单【管理员审核后显示】</div>
@@ -214,8 +212,7 @@
             <input type="text" class="input" id="playChatInput" placeholder="禁止发联系方式">
             <button class="btn-sm" onclick="sendPlayMsg()">发送</button>
         </div>
-
-        <!-- 管理员端（新增：修改密码按钮） -->
+        <!-- 管理员端（修复：改密码按钮适配自定义名称） -->
         <div class="page" id="admin">
             <div class="title">🎯 系统访问二维码【转发全员】</div>
             <div class="qrcode-box">
@@ -230,7 +227,7 @@
                 <button class="btn btn-red" onclick="delPlay()">➖ 删除选中陪玩</button>
             </div>
             <div class="tip-green">已添加：<span id="playCount">2</span>/50 人</div>
-            <!-- 修复：陪玩列表显示修改密码按钮 -->
+            <!-- 修复：陪玩列表显示（含改密码按钮，适配自定义名称） -->
             <div class="order-record" id="playListShow">
                 当前陪玩：<br>
                 001（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('001')">改密码</button>）、
@@ -272,7 +269,6 @@
     </div>
     <div class="play-float-btn" onclick="toggleFloatList()">🎮</div>
     <div class="play-float-list" id="playFloatList"></div>
-
     <script>
         let currentTab = "boss", finalPrice = 0;
         let isPlayLogin = false, isAdminLogin = false, isBossBind = false;
@@ -281,7 +277,6 @@
         let activePrice = 2, activityName = "🎄圣诞特惠：4队技术2r/局，无小时单";
         const MAX_PLAY = 50, ADMIN_DEFAULT_PWD = "admin888";
         const forbidWords = ["加好友","私加","微信","QQ","微❤","绿泡泡","V","q"];
-
         // 初始化
         function loadData() {
             try {
@@ -310,7 +305,6 @@
             initFloatList();bossBindCheck();playBindCheck();calcPrice();autoPlayLogin();
             updatePlayManage();updateActivityShow();getAdminData();
         }
-
         function saveData() {
             localStorage.setItem("hk_playList",JSON.stringify(window.playList));
             localStorage.setItem("hk_adminPwd",window.adminPwd);
@@ -321,7 +315,6 @@
             localStorage.setItem("hk_activePrice",activePrice);
             localStorage.setItem("hk_activityName",activityName);
         }
-
         // 1. 修复：付款凭证上传无反应（核心修改）
         function uploadPayImg(el) {
             if (!el.files.length) return;
@@ -336,14 +329,12 @@
                 el.value = "";
                 return;
             }
-
             // 校验文件大小（≤5MB）
             if (file.size > 5 * 1024 * 1024) {
                 alert("❌ 图片大小不能超过5MB，请压缩后上传！");
                 el.value = "";
                 return;
             }
-
             // 预览图片（让用户确认上传成功）
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -368,7 +359,6 @@
             reader.readAsDataURL(file);
             el.value = ""; // 重置输入，允许重复上传
         }
-
         // 2. 修复：陪玩自动登录重复触发
         function autoPlayLogin() {
             if (isPlayLogin) return; // 已登录则跳过
@@ -380,7 +370,6 @@
                 playBindCheck();
             }
         }
-
         // 3. 修复：提现功能无余额扣减
         function withdraw(){
             const num = parseFloat(document.getElementById("withdrawNum").value);
@@ -400,7 +389,6 @@
             alert(`✅ 提现申请提交：¥${num}\n剩余余额：¥${play.money}`);
             document.getElementById("withdrawNum").value = "";
         }
-
         // 4. 修复：聊天系统未滚动到最新消息
         function sendBossMsg(){
             const msg=document.getElementById("bossChatInput").value.trim();
@@ -436,7 +424,6 @@
             document.getElementById("adminChatInput").value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
         }
-
         // 5. 修复：管理员终审结单未重置选中陪玩
         function finalConfirmOrder(){
             const order = window.orderList[window.orderList.length-1];
@@ -460,7 +447,6 @@
             },3000);
             initFloatList();getAdminData();saveData();
         }
-
         // 6. 新增：陪玩密码修改功能（管理员端）
         function openEditPlayPwdModal(pwd){
             const play = window.playList.find(item=>item.pwd===pwd);
@@ -484,18 +470,41 @@
         function closeModal(modalId){
             document.getElementById(modalId).style.display = "none";
         }
-
-        // 7. 修复：陪玩列表显示（含修改密码按钮）
+        // 7. 修复：陪玩列表显示（含改密码按钮，适配自定义名称）
         function updatePlayManage(){
             document.getElementById("playCount").innerText = window.playList.length;
             let playStr = "";
+            // 遍历所有陪玩，无论名称格式，均生成“名称（改密码按钮）”结构
             window.playList.forEach(item=>{
-                playStr += `${item.pwd}（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('${item.pwd}')">改密码</button>）、`;
+                const playAccount = item.pwd; // 直接使用原始账号，确保改密码功能正常
+                playStr += `${item.name}（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('${playAccount}')">改密码</button>）、`;
             });
+            // 移除末尾多余的“、”
             document.getElementById("playListShow").innerText = `当前陪玩：${playStr.slice(0,-1)}`;
-            initFloatList();
+            initFloatList(); // 同步更新悬浮窗
         }
-
+        // 8. 优化：新增陪玩支持自定义名称，避免名称混乱
+        function addPlay(){
+            const pwd = document.getElementById("addPlayId").value.trim();
+            if(!pwd||window.playList.some(item=>item.pwd===pwd)){alert("账号为空/已存在！");return;}
+            if(window.playList.length >= MAX_PLAY){alert(`已达上限${MAX_PLAY}人！`);return;}
+            // 弹出输入框，让用户自定义名称（建议包含账号）
+            const playName = prompt("请输入陪玩名称（建议包含账号，如“陪玩003-技术”）", `陪玩${pwd}`);
+            if(!playName) return; // 取消输入则不添加
+            window.playList.push({
+                pwd,
+                name: playName, // 自定义名称
+                status:"offline",
+                orderStatus:"idle",
+                good:0,
+                bad:0,
+                money:0,
+                phone:"",
+                deviceId:""
+            });
+            updatePlayManage();saveData();alert(`✅ 添加成功：${playName}（账号：${pwd}）`);
+            document.getElementById("addPlayId").value = "";
+        }
         // 原有功能保留（未修改部分）
         function toggleFloatList(){
             const list = document.getElementById("playFloatList");
@@ -535,19 +544,12 @@
                 return false;
             }
         }
-        function addPlay(){
-            const pwd = document.getElementById("addPlayId").value.trim();
-            if(!pwd||window.playList.some(item=>item.pwd===pwd)){alert("账号为空/已存在！");return;}
-            if(window.playList.length >= MAX_PLAY){alert(`已达上限${MAX_PLAY}人！`);return;}
-            window.playList.push({pwd,name:`陪玩${pwd}`,status:"offline",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""});
-            updatePlayManage();saveData();alert(`✅ 添加成功：${pwd}`);
-            document.getElementById("addPlayId").value = "";
-        }
         function delPlay(){
             const pwd = document.getElementById("addPlayId").value.trim();
             if(!pwd||!window.playList.some(item=>item.pwd===pwd)){alert("账号不存在！");return;}
+            const play = window.playList.find(item=>item.pwd===pwd);
             window.playList = window.playList.filter(item=>item.pwd!==pwd);
-            updatePlayManage();saveData();alert(`✅ 删除成功：${pwd}`);
+            updatePlayManage();saveData();alert(`✅ 删除成功：${play.name}（账号：${pwd}）`);
             document.getElementById("addPlayId").value = "";
         }
         function setCount(num) {
@@ -691,7 +693,7 @@
         function playBindCheck(){const play=window.playList.find(item=>item.pwd===currentPlayId);if(play&&play.phone){document.getElementById("playBindBox").style.display="none";document.getElementById("playBindSuccess").style.display="block";document.getElementById("playBindedPhone").innerText=play.phone;}}
         function playUnbind(){const play=window.playList.find(item=>item.pwd===currentPlayId);play.phone="";play.deviceId="";document.getElementById("playBindBox").style.display="block";document.getElementById("playBindSuccess").style.display="none";saveData();}
         function switchTab(tab){
-            if(tab==="play"&&!isPlayLogin){openPlayLogin();return;}if(tab==="admin"&&!isAdminLogin){openAdminLogin();return;}
+            if(tab====="play"&&!isPlayLogin){openPlayLogin();return;}if(tab==="admin"&&!isAdminLogin){openAdminLogin();return;}
             currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
             document.querySelector(`.tab-btn[onclick="${tab==='boss'?'switchTab(\'boss\')':tab==='play'?'openPlayLogin()':'openAdminLogin()'}"]`).classList.add('active');
             document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(tab).classList.add('active');
@@ -699,7 +701,6 @@
         function changeAdminPwd(){const pwd=document.getElementById("newAdminPwd").value.trim();if(!pwd)alert("⚠️ 输入新密码！");else{window.adminPwd=pwd;saveData();alert("✅ 密码修改成功！");document.getElementById("newAdminPwd").value="";}}
         function getOrder(){document.getElementById("orderList").innerHTML=window.orderList.length>0&&window.orderList[window.orderList.length-1].orderStatus==="已同意"?`✅ 订单：${window.orderList[window.orderList.length-1].id}`:"暂无有效订单";}
         function saveCode(){alert("✅ 收款码保存成功！");}
-
         // 页面加载初始化
         window.onload = ()=>{loadData();calcPrice();initFloatList();};
     </script>
