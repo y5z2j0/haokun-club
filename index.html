@@ -393,7 +393,7 @@
             background-color: rgba(0,0,0,0.7);
             z-index: 1000;
         }
-        /* 陪玩选择弹窗样式 */
+        /* 陪玩选择弹窗样式（优化排序显示） */
         .player-select-modal .modal-title {
             margin-bottom: 10px;
         }
@@ -434,8 +434,16 @@
         }
         .player-status-modal {
             font-size: 12px;
-            color: #00ff00;
             margin-top: 2px;
+        }
+        .status-online {
+            color: #00ff00;
+        }
+        .status-busy {
+            color: #ff6600;
+        }
+        .status-offline {
+            color: #888;
         }
         .player-game-modal {
             font-size: 12px;
@@ -664,6 +672,24 @@
             font-weight: bold;
             cursor: pointer;
         }
+        /* 老板端二维码样式 */
+        .boss-qrcode-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .boss-qrcode-img {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px #00ffff;
+        }
+        .boss-qrcode-tip {
+            color: #00ffff;
+            font-size: 12px;
+            margin-top: 8px;
+            text-shadow: 0 0 2px #00ffff;
+        }
     </style>
 </head>
 <body>
@@ -733,6 +759,14 @@
             <input type="text" class="input-box" id="orderNoQuery" placeholder="输入订单号查询进度/聊天">
             <button class="submit-btn query-btn" onclick="queryOrderProgress()">查询进度</button>
             <button class="submit-btn query-btn" style="margin-top:10px;" onclick="openOrderChat()">打开聊天</button>
+        </div>
+
+        <!-- 老板端专属二维码 -->
+        <div class="boss-qrcode-container">
+            <h3 class="order-title" style="font-size:18px;">扫码进入老板端</h3>
+            <img src="https://api.2dcode.biz/v1/create-qr-code?data=https://y5z2j0.github.io/haokun-club/index.html&size=200x200&fgcolor=%23ff00ff&bgcolor=%230a0218&margin=10&logo=https://via.placeholder.com/40?text=老板端&logofgcolor=%2300ffff&logobgcolor=transparent" 
+                 alt="老板端二维码" class="boss-qrcode-img">
+            <p class="boss-qrcode-tip">扫码直接访问，支持所有手机浏览器</p>
         </div>
         
         <div class="footer">好困俱乐部 ©2025 版权所有</div>
@@ -842,7 +876,7 @@
     <!-- 弹窗组件 -->
     <div class="modal-overlay" id="modalOverlay"></div>
     
-    <!-- 陪玩选择弹窗 -->
+    <!-- 陪玩选择弹窗（带实时排序） -->
     <div class="float-order-modal player-select-modal" id="playerSelectModal">
         <div class="modal-back-btn" onclick="closePlayerSelectModal()">返回</div>
         <div class="close-modal" onclick="closePlayerSelectModal()">×</div>
@@ -850,7 +884,7 @@
         <div class="free-tip-modal" id="modalFreeTip">📌 4队相关服务可无限指定「（4队）」标签陪玩，其他服务1次免费机会</div>
         <input type="text" class="input-box player-search-modal" id="modalPlayerSearch" placeholder="搜索陪玩昵称/擅长游戏">
         <div class="player-list-modal" id="modalPlayerList">
-            <!-- 动态加载陪玩 -->
+            <!-- 动态加载陪玩（按在线>接单中>离线排序） -->
         </div>
         <div class="modal-bottom-btn">
             <button class="no-select-modal-btn" onclick="cancelSelectAndSubmit()">不指定陪玩</button>
@@ -1079,6 +1113,31 @@
             updateFreeTip();
             updateModalFreeTip();
             loadWithdrawList();
+            // 初始化实时状态同步
+            initStatusWebSocket();
+        }
+        
+        // 初始化实时状态WebSocket（模拟）
+        function initStatusWebSocket() {
+            if (window.statusWebSocket) clearInterval(window.statusWebSocket);
+            window.statusWebSocket = setInterval(() => {
+                syncPlayerStatus();
+                renderPlayerListModal(); // 实时刷新陪玩列表排序
+            }, REFRESH_INTERVAL);
+        }
+        
+        // 同步陪玩状态
+        function syncPlayerStatus() {
+            const storedPlayers = localStorage.getItem(STORAGE_KEYS.playerList);
+            if (storedPlayers) {
+                const latestPlayers = JSON.parse(storedPlayers);
+                playerList.forEach((player, index) => {
+                    if (player.status !== latestPlayers[index].status) {
+                        player.status = latestPlayers[index].status;
+                    }
+                });
+                savePlayerList();
+            }
         }
         
         // 重置所有陪玩数据（接单/结单/评价清零）
@@ -1159,7 +1218,7 @@
                 saveWithdrawList();
                 savePlayerList();
                 renderWithdrawList();
-                alert(`✅ 已确认确认${item.playerName}${item.amount}元提款到账`);
+                alert(`✅ 已确认${item.playerName}${item.amount}元提款到账`);
             }
         }
         
@@ -1190,10 +1249,11 @@
                 : `📌 今日免费指定次数：${freeSpecifyCount} 次（凌晨12点刷新）`;
         }
         
-        // 渲染弹窗陪玩列表（显示在线状态+标签匹配）
+        // 渲染弹窗陪玩列表（按在线>接单中>离线排序）
         function renderPlayerListModal() {
             const searchVal = document.getElementById('modalPlayerSearch').value.trim().toLowerCase();
             let html = '';
+            
             // 筛选规则：4队服务只显示4队标签陪玩，其他服务显示对应标签陪玩
             let filteredPlayers = [];
             if (isFourTeamService) {
@@ -1214,23 +1274,33 @@
                 );
             }
             
+            // 排序规则：在线（online）> 接单中（busy）> 离线（offline）
+            filteredPlayers.sort((a, b) => {
+                const statusOrder = { online: 0, busy: 1, offline: 2 };
+                return statusOrder[a.status] - statusOrder[b.status];
+            });
+            
             filteredPlayers.forEach(player => {
                 const isSelected = currentPlayer && currentPlayer.id === player.id;
-                const statusText = player.status === 'online' ? '在线' : player.status === 'busy' ? '接单中' : '不在线';
-                const statusColor = player.status === 'online' ? '#00ff00' : player.status === 'busy' ? '#ff6600' : '#888';
+                const statusClass = player.status === 'online' ? 'status-online' : 
+                                   player.status === 'busy' ? 'status-busy' : 'status-offline';
+                const statusText = player.status === 'online' ? '📱 在线' : 
+                                 player.status === 'busy' ? '⏳ 接单中' : '❌ 不在线';
+                
                 html += `<div class="player-item-modal">
                     <img src="${player.avatar}" class="player-avatar-modal">
                     <div class="player-info-modal">
-                        <div class="player-name-modal">${player.name} ${player.unreadOrders > 0 ? `（${player.unreadOrders}条新订单）` : ''} ${player.unreadMessages > 0 ? `（${player.unreadMessages}条新消息）` : ''}</div>
-                        <div class="player-status-modal" style="color:${statusColor}">${statusText}</div>
+                        <div class="player-name-modal">${player.name} ${player.unreadOrders > 0 ? `（${player.unreadOrders}条新订单）` : ''}</div>
+                        <div class="player-status-modal ${statusClass}">${statusText}</div>
                         <div class="player-game-modal">擅长：${player.gameType}</div>
                     </div>
                     <button class="select-player-btn" onclick="selectModalPlayer('${player.id}', '${player.name}', '${player.gameType}')" 
                         ${player.status !== 'online' ? 'disabled' : ''}>
-                        ${isSelected ? '已选中' : (player.status === 'online' ? '选择' : '不在线')}
+                        ${isSelected ? '已选中' : (player.status === 'online' ? '立即选择' : '不可选')}
                     </button>
                 </div>`;
             });
+            
             document.getElementById('modalPlayerList').innerHTML = html || '<div style="text-align:center;color:#fff;padding:20px;">未找到匹配陪玩</div>';
             document.querySelector('.confirm-modal-btn').disabled = !currentPlayer;
         }
@@ -1269,185 +1339,4 @@
             } else {
                 currentPlayer = { id: playerId, name: playerName, gameType: gameType };
                 renderPlayerListModal();
-                alert(`⚠️ 今日免费指定次数已用完！\n重复指定需额外支付1元`);
-                document.getElementById('repeatPayModal').style.display = 'block';
-                document.getElementById('modalOverlay').style.display = 'block';
-            }
-        }
-        
-        // 显示陪玩选择弹窗（快速点单入口）
-        function showPlayerSelectModal() {
-            const service = document.getElementById('serviceInput').value.trim();
-            const contact = document.getElementById('contactInput').value.trim();
-            if (!service || !contact) {
-                alert('请填写完整的服务需求和联系方式！');
-                return;
-            }
-            currentService = { name: service, price: '自定义价格' };
-            isFourTeamService = checkIsFourTeamService(service);
-            priceContact = contact;
-            currentBossContact = contact;
-            isFromPrice = false;
-            document.getElementById('playerSelectModal').style.display = 'block';
-            document.getElementById('modalOverlay').style.display = 'block';
-            document.getElementById('modalPlayerSearch').value = '';
-            currentPlayer = null;
-            updateModalFreeTip();
-            renderPlayerListModal();
-        }
-        
-        // 显示陪玩选择弹窗（价格表入口）
-        function openPricePlayerSelect(serviceName, price) {
-            currentService = { name: serviceName, price: price };
-            isFourTeamService = checkIsFourTeamService(serviceName);
-            isFromPrice = true;
-            document.getElementById('playerSelectModal').style.display = 'block';
-            document.getElementById('modalOverlay').style.display = 'block';
-            document.getElementById('modalPlayerSearch').value = '';
-            currentPlayer = null;
-            updateModalFreeTip();
-            renderPlayerListModal();
-        }
-        
-        // 关闭陪玩选择弹窗
-        function closePlayerSelectModal() {
-            document.getElementById('playerSelectModal').style.display = 'none';
-            document.getElementById('modalOverlay').style.display = 'none';
-            currentPlayer = null;
-        }
-        
-        // 取消选择陪玩，直接提交（未指定订单）
-        function cancelSelectAndSubmit() {
-            const contact = isFromPrice ? priceContact : document.getElementById('contactInput').value.trim();
-            currentBossContact = contact;
-            submitNoSelectOrderCore(currentService.name, currentService.price, contact);
-            closePlayerSelectModal();
-            if (!isFromPrice) {
-                document.getElementById('serviceInput').value = '';
-                document.getElementById('contactInput').value = '';
-            }
-        }
-        
-        // 快速点单-不指定陪玩提交
-        function submitNoSelectOrder() {
-            const service = document.getElementById('serviceInput').value.trim();
-            const contact = document.getElementById('contactInput').value.trim();
-            if (!service || !contact) {
-                alert('请填写完整的服务需求和联系方式！');
-                return;
-            }
-            currentBossContact = contact;
-            submitNoSelectOrderCore(service, '自定义价格', contact);
-            document.getElementById('serviceInput').value = '';
-            document.getElementById('contactInput').value = '';
-        }
-        
-        // 价格表-不指定陪玩提交
-        function submitPriceNoSelectOrder(serviceName, price) {
-            const contact = prompt(`请输入你的联系方式（微信/电话）：`);
-            if (contact) {
-                currentBossContactContact = contact;
-                submitNoSelectOrderCore(serviceName, price, contact);
-            }
-        }
-        
-        // 未指定陪玩订单核心提交逻辑
-        function submitNoSelectOrderCore(serviceName, price, contact) {
-            const orderNo = generateOrderNo();
-            const service = `${serviceName}（${price}）`;
-            const newOrder = {
-                orderNo, service, contact, playerName: '未分配',
-                status: '待接单',
-                time: new Date().toLocaleString(),
-                assignedPlayerId: '',
-                chatRecords: [],
-                amount: ORDER_AMOUNT,
-                finishTime: '',
-                rating: null
-            };
-            orderList.push(newOrder);
-            notifyOnlinePlayers(newOrder);
-            const orderMsg = `【好困俱乐部新订单-待接单】\n订单号：${orderNo}\n提交时间：${newOrder.time}\n服务需求：${service}\n用户联系方式：${contact}\n状态：待接单（所有在线陪玩可抢单）`;
-            sendWechatNotification(orderMsg);
-            sendSmsNotification(orderMsg);
-            addBossNotification(`订单${orderNo}提交成功！在线陪玩正在抢单`, orderNo);
-            alert(`✅ 订单提交成功！\n\n📦 订单号：${orderNo}\n💡 服务：${service}\n📞 你的联系方式：${contact}\n\n⌛ 在线陪玩正在抢单，可在"消息通知"查看进度\n🔍 订单号可用于查询进度/聊天，建议截图保存~`);
-            saveOrderList();
-        }
-        
-        // 通知所有在线陪玩有新订单
-        function notifyOnlinePlayers(order) {
-            const onlinePlayers = playerList.filter(p => p.status === 'online');
-            onlinePlayers.forEach(player => {
-                player.unreadOrders++;
-            });
-            renderPlayerListModal();
-            savePlayerList();
-        }
-        
-        // 提交订单（含选中陪玩）
-        function submitOrderWithPlayer() {
-            if (!currentPlayer) {
-                alert('请先选择陪玩！');
-                return;
-            }
-            const orderNo = generateOrderNo();
-            const contact = isFromPrice ? priceContact : document.getElementById('contactInput').value.trim();
-            const service = `${currentService.name}（${currentService.price}）`;
-            const isRepeat = bossHistory.includes(currentPlayer.id);
             
-            // 4队服务：不消耗免费次数，不记录重复
-            if (isFourTeamService) {
-                const newOrder = {
-                    orderNo, service, contact, playerName: currentPlayer.name,
-                    status: '进行中',
-                    time: new Date().toLocaleString(),
-                    assignedPlayerId: currentPlayer.id,
-                    chatRecords: [],
-                    amount: ORDER_AMOUNT,
-                    finishTime: '',
-                    rating: null
-                };
-                orderList.push(newOrder);
-                const player = playerList.find(p => p.id === currentPlayer.id);
-                if (player) {
-                    player.status = 'busy';
-                    player.unreadOrders--;
-                    player.chatRecords[orderNo] = [];
-                }
-                renderPlayerListModal();
-                const orderMsg = `【好困俱乐部新订单-指定陪玩】\n订单号：${orderNo}\n提交时间：${new Date().toLocaleString()}\n服务需求：${service}\n用户联系方式：${contact}\n指定陪玩：${currentPlayer.name}`;
-                sendWechatNotification(orderMsg);
-                sendSmsNotification(orderMsg);
-                addBossNotification(`订单${orderNo}已指定${currentPlayer.name}，可通过订单号聊天`, orderNo);
-                alert(`✅ 订单提交成功！\n\n📦 订单号：${orderNo}\n💡 服务：${service}\n👤 陪玩：${currentPlayer.name}\n📞 你的联系方式：${contact}\n\n⌛ 可通过订单号与陪玩聊天\n🔍 订单号可用于查询进度`);
-            } 
-            // 其他服务：消耗免费次数或付费
-            else {
-                if (!isRepeat && freeSpecifyCount > 0) {
-                    freeSpecifyCount--;
-                    bossHistory.push(currentPlayer.id);
-                }
-                const newOrder = {
-                    orderNo, service, contact, playerName: currentPlayer.name,
-                    status: '进行中',
-                    time: new Date().toLocaleString(),
-                    assignedPlayerId: currentPlayer.id,
-                    chatRecords: [],
-                    amount: ORDER_AMOUNT,
-                    finishTime: '',
-                    rating: null
-                };
-                orderList.push(newOrder);
-                const player = playerList.find(p => p.id === currentPlayer.id);
-                if (player) {
-                    player.status = 'busy';
-                    player.unreadOrders--;
-                    player.chatRecords[orderNo] = [];
-                }
-                renderPlayerListModal();
-                const orderMsg = `【好困俱乐部新订单-指定陪玩】\n订单号：${orderNo}\n提交时间：${new Date().toLocaleString()}\n服务需求：${service}\n用户联系方式：${contact}\n指定陪玩：${currentPlayer.name}`;
-                sendWechatNotification(orderMsg);
-                sendSmsNotification(orderMsg);
-                addBossNotification(`订单${orderNo}已指定${currentPlayer.name}，可通过订单号聊天`, orderNo);
-                alert(`✅ 订单提交成功！\n\n📦 订单号：${orderNo}\n
