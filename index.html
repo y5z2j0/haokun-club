@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>好困俱乐部 - 陪玩系统【终极完整版】</title>
+    <title>好困俱乐部 - 陪玩系统【最终修复版】</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:Arial, sans-serif;font-size:16px;}
         body{width:100vw;height:100vh;overflow:hidden;background:#1a1a2e;color:#fff;padding:10px;}
@@ -16,7 +16,7 @@
         .btn{width:100%;height:50px;line-height:50px;border:none;border-radius:25px;background:#e94560;color:#fff;font-size:17px;font-weight:bold;margin:10px 0;cursor:pointer;}
         .btn-sm{width:48%;height:45px;line-height:45px;font-size:15px;margin:5px 0;border-radius:20px;}
         .btn-gray{background:#666;pointer-events:none;opacity:0.7;}
-        .btn-green{background:#00ff9d;}
+        .btn-green{background:#00ff9d;color:#000;}
         .btn-red{background:#ff4444;}
         .input{width:100%;height:45px;padding:0 15px;border-radius:10px;border:1px solid #333;background:#222;color:#fff;margin:8px 0;}
         .select{width:100%;height:45px;padding:0 15px;border-radius:10px;border:1px solid #333;background:#222;color:#fff;margin:8px 0;}
@@ -60,10 +60,10 @@
         .order-record{padding:10px;border-radius:10px;background:#222;margin:10px 0;font-size:14px;}
         .manage-box{display:flex;gap:8px;margin:10px 0;}
         /* 新增：修改密码弹窗样式 */
-        .modal{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:1001;}
-        .modal-content{width:90%;max-width:350px;background:#16213e;padding:20px;border-radius:15px;}
+        .modal{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:1001;}
+        .modal-content{width:90%;max-width:350px;background:#16213e;padding:20px;border-radius:15px;position:relative;}
         .modal-title{font-size:18px;font-weight:bold;margin-bottom:15px;text-align:center;}
-        .modal-close{position:absolute;top:15px;right:15px;font-size:20px;cursor:pointer;}
+        .modal-close{position:absolute;top:15px;right:15px;font-size:20px;cursor:pointer;color:#ff4444;}
     </style>
 </head>
 <body>
@@ -83,17 +83,22 @@
             <button class="btn" onclick="adminLogin()">登录</button>
         </div>
     </div>
-    <!-- 新增：修改陪玩密码弹窗 -->
-    <div class="modal" id="editPlayPwdModal">
+    <!-- 新增：修改陪玩密码弹窗（默认隐藏，点击按钮显示） -->
+    <div class="modal" id="editPlayPwdModal" style="display:none;">
         <div class="modal-content">
+            <div class="modal-close" onclick="closeModal('editPlayPwdModal')">×</div>
             <div class="modal-title">修改陪玩密码</div>
             <input type="hidden" id="targetPlayPwdId">
-            <div class="tip-green" id="editPlayName"></div>
-            <input type="password" class="input" id="newPlayPwd" placeholder="输入新密码">
+            <div class="tip-green" id="editPlayName">当前陪玩：陪玩001</div>
+            <div class="form-item">
+                <label style="display:block;margin:8px 0;">新密码</label>
+                <input type="password" class="input" id="newPlayPwd" placeholder="输入新密码（不能为空）">
+            </div>
             <button class="btn btn-green" onclick="savePlayPwd()">确认修改</button>
-            <button class="btn btn-gray" onclick="closeModal('editPlayPwdModal')">取消</button>
+            <button class="btn btn-gray" onclick="closeModal('editPlayPwdModal')" style="margin-top:8px;">取消</button>
         </div>
     </div>
+
     <div class="tab-box">
         <button class="tab-btn active" onclick="switchTab('boss')">老板点单端</button>
         <button class="tab-btn" onclick="openPlayLogin()">陪玩接单端</button>
@@ -181,6 +186,7 @@
             <input type="text" class="input" id="bossChatInput" placeholder="禁止发联系方式">
             <button class="btn-sm" onclick="sendBossMsg()">发送</button>
         </div>
+
         <!-- 陪玩端 -->
         <div class="page" id="play">
             <div class="title">📢 待接订单【管理员审核后显示】</div>
@@ -212,7 +218,8 @@
             <input type="text" class="input" id="playChatInput" placeholder="禁止发联系方式">
             <button class="btn-sm" onclick="sendPlayMsg()">发送</button>
         </div>
-        <!-- 管理员端（修复：改密码按钮适配自定义名称） -->
+
+        <!-- 管理员端（彻底修复：改密码按钮正常显示+点击有效） -->
         <div class="page" id="admin">
             <div class="title">🎯 系统访问二维码【转发全员】</div>
             <div class="qrcode-box">
@@ -227,11 +234,11 @@
                 <button class="btn btn-red" onclick="delPlay()">➖ 删除选中陪玩</button>
             </div>
             <div class="tip-green">已添加：<span id="playCount">2</span>/50 人</div>
-            <!-- 修复：陪玩列表显示（含改密码按钮，适配自定义名称） -->
+            <!-- 彻底修复：初始状态按钮正常渲染，用innerHTML解析HTML标签 -->
             <div class="order-record" id="playListShow">
                 当前陪玩：<br>
-                001（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('001')">改密码</button>）、
-                002（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('002')">改密码</button>）
+                陪玩001 <button class="btn-sm btn-green" onclick="openEditPlayPwdModal('001')">改密码</button>、
+                陪玩002 <button class="btn-sm btn-green" onclick="openEditPlayPwdModal('002')">改密码</button>
             </div>
             <div class="title">🎡 活动可视化配置【无需改代码，一键生效】</div>
             <input type="text" class="input" id="activityInput" placeholder="输入活动名称" value="圣诞特惠：4队技术2r/局，无小时单">
@@ -269,6 +276,7 @@
     </div>
     <div class="play-float-btn" onclick="toggleFloatList()">🎮</div>
     <div class="play-float-list" id="playFloatList"></div>
+
     <script>
         let currentTab = "boss", finalPrice = 0;
         let isPlayLogin = false, isAdminLogin = false, isBossBind = false;
@@ -277,6 +285,7 @@
         let activePrice = 2, activityName = "🎄圣诞特惠：4队技术2r/局，无小时单";
         const MAX_PLAY = 50, ADMIN_DEFAULT_PWD = "admin888";
         const forbidWords = ["加好友","私加","微信","QQ","微❤","绿泡泡","V","q"];
+
         // 初始化
         function loadData() {
             try {
@@ -305,6 +314,7 @@
             initFloatList();bossBindCheck();playBindCheck();calcPrice();autoPlayLogin();
             updatePlayManage();updateActivityShow();getAdminData();
         }
+
         function saveData() {
             localStorage.setItem("hk_playList",JSON.stringify(window.playList));
             localStorage.setItem("hk_adminPwd",window.adminPwd);
@@ -315,6 +325,7 @@
             localStorage.setItem("hk_activePrice",activePrice);
             localStorage.setItem("hk_activityName",activityName);
         }
+
         // 1. 修复：付款凭证上传无反应（核心修改）
         function uploadPayImg(el) {
             if (!el.files.length) return;
@@ -329,12 +340,14 @@
                 el.value = "";
                 return;
             }
+
             // 校验文件大小（≤5MB）
             if (file.size > 5 * 1024 * 1024) {
                 alert("❌ 图片大小不能超过5MB，请压缩后上传！");
                 el.value = "";
                 return;
             }
+
             // 预览图片（让用户确认上传成功）
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -359,6 +372,7 @@
             reader.readAsDataURL(file);
             el.value = ""; // 重置输入，允许重复上传
         }
+
         // 2. 修复：陪玩自动登录重复触发
         function autoPlayLogin() {
             if (isPlayLogin) return; // 已登录则跳过
@@ -370,6 +384,7 @@
                 playBindCheck();
             }
         }
+
         // 3. 修复：提现功能无余额扣减
         function withdraw(){
             const num = parseFloat(document.getElementById("withdrawNum").value);
@@ -389,6 +404,7 @@
             alert(`✅ 提现申请提交：¥${num}\n剩余余额：¥${play.money}`);
             document.getElementById("withdrawNum").value = "";
         }
+
         // 4. 修复：聊天系统未滚动到最新消息
         function sendBossMsg(){
             const msg=document.getElementById("bossChatInput").value.trim();
@@ -424,6 +440,7 @@
             document.getElementById("adminChatInput").value = "";
             chatBox.scrollTop = chatBox.scrollHeight;
         }
+
         // 5. 修复：管理员终审结单未重置选中陪玩
         function finalConfirmOrder(){
             const order = window.orderList[window.orderList.length-1];
@@ -447,53 +464,73 @@
             },3000);
             initFloatList();getAdminData();saveData();
         }
-        // 6. 新增：陪玩密码修改功能（管理员端）
+
+        // 6. 彻底修复：陪玩密码修改功能（按钮显示+点击+保存全流程）
         function openEditPlayPwdModal(pwd){
             const play = window.playList.find(item=>item.pwd===pwd);
-            if(!play) return;
+            if(!play) {
+                alert("❌ 该陪玩账号不存在！");
+                return;
+            }
+            // 填充弹窗数据
             document.getElementById("targetPlayPwdId").value = pwd;
             document.getElementById("editPlayName").innerText = `当前陪玩：${play.name}`;
             document.getElementById("newPlayPwd").value = "";
+            // 显示弹窗
             document.getElementById("editPlayPwdModal").style.display = "flex";
         }
+
         function savePlayPwd(){
             const pwd = document.getElementById("targetPlayPwdId").value;
             const newPwd = document.getElementById("newPlayPwd").value.trim();
-            if(!newPwd){alert("⚠️ 新密码不能为空！");return;}
+            if(!newPwd){
+                alert("⚠️ 新密码不能为空！");
+                return;
+            }
+            // 查找陪玩并更新密码
             const play = window.playList.find(item=>item.pwd===pwd);
-            play.pwd = newPwd; // 更新密码
+            play.pwd = newPwd; // 直接更新密码
             saveData();
             updatePlayManage(); // 刷新陪玩列表
-            closeModal("editPlayPwdModal");
-            alert(`✅ 陪玩${play.name}密码修改成功！新密码：${newPwd}`);
+            closeModal("editPlayPwdModal"); // 关闭弹窗
+            alert(`✅ 陪玩【${play.name}】密码修改成功！新密码：${newPwd}`);
         }
+
         function closeModal(modalId){
             document.getElementById(modalId).style.display = "none";
         }
-        // 7. 修复：陪玩列表显示（含改密码按钮，适配自定义名称）
+
+        // 7. 彻底修复：陪玩列表显示（用innerHTML解析按钮，适配所有名称）
         function updatePlayManage(){
             document.getElementById("playCount").innerText = window.playList.length;
             let playStr = "";
-            // 遍历所有陪玩，无论名称格式，均生成“名称（改密码按钮）”结构
+            // 遍历所有陪玩，生成“名称+改密码按钮”
             window.playList.forEach(item=>{
-                const playAccount = item.pwd; // 直接使用原始账号，确保改密码功能正常
-                playStr += `${item.name}（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('${playAccount}')">改密码</button>）、`;
+                playStr += `${item.name} <button class="btn-sm btn-green" onclick="openEditPlayPwdModal('${item.pwd}')">改密码</button>、`;
             });
-            // 移除末尾多余的“、”
-            document.getElementById("playListShow").innerText = `当前陪玩：${playStr.slice(0,-1)}`;
+            // 移除末尾多余的“、”，更新显示
+            document.getElementById("playListShow").innerHTML = `当前陪玩：<br>${playStr.slice(0,-1)}`;
             initFloatList(); // 同步更新悬浮窗
         }
+
         // 8. 优化：新增陪玩支持自定义名称，避免名称混乱
         function addPlay(){
             const pwd = document.getElementById("addPlayId").value.trim();
-            if(!pwd||window.playList.some(item=>item.pwd===pwd)){alert("账号为空/已存在！");return;}
-            if(window.playList.length >= MAX_PLAY){alert(`已达上限${MAX_PLAY}人！`);return;}
-            // 弹出输入框，让用户自定义名称（建议包含账号）
-            const playName = prompt("请输入陪玩名称（建议包含账号，如“陪玩003-技术”）", `陪玩${pwd}`);
-            if(!playName) return; // 取消输入则不添加
+            if(!pwd||window.playList.some(item=>item.pwd===pwd)){
+                alert("❌ 账号为空或已存在！");
+                return;
+            }
+            if(window.playList.length >= MAX_PLAY){
+                alert(`❌ 已达陪玩上限${MAX_PLAY}人！`);
+                return;
+            }
+            // 自定义名称
+            const playName = prompt("请输入陪玩名称（建议包含账号）", `陪玩${pwd}`);
+            if(!playName) return;
+            // 添加新陪玩
             window.playList.push({
                 pwd,
-                name: playName, // 自定义名称
+                name: playName,
                 status:"offline",
                 orderStatus:"idle",
                 good:0,
@@ -502,15 +539,19 @@
                 phone:"",
                 deviceId:""
             });
-            updatePlayManage();saveData();alert(`✅ 添加成功：${playName}（账号：${pwd}）`);
+            updatePlayManage();
+            saveData();
+            alert(`✅ 添加成功：${playName}（账号：${pwd}）`);
             document.getElementById("addPlayId").value = "";
         }
+
         // 原有功能保留（未修改部分）
         function toggleFloatList(){
             const list = document.getElementById("playFloatList");
             list.style.display = list.style.display==="block"?"none":"block";
             list.scrollTop = 0;
         }
+
         function initFloatList() {
             const list = document.getElementById("playFloatList");
             list.innerHTML = `<div class="title" style="text-align:center;margin:0;">陪玩列表(${window.playList.length}/${MAX_PLAY})</div><div class="float-play-item ${selectedPlayId==='auto'?'active':''}" onclick="selectPlay('auto')">📌 自动派单【免费】</div>`;
@@ -522,15 +563,17 @@
                 list.innerHTML += `<div class="float-play-item ${cls} ${active}" onclick="selectPlay('${item.pwd}')">${item.name}【${item.orderStatus==='working'?'接单中':item.status==='online'?'在线':'离线'}】</div>`;
             });
         }
+
         function selectPlay(pwd) {
             selectedPlayId = pwd;selectPlayCount++;
             const serviceType = document.getElementById("serviceType").value;
             playSelectPrice = serviceType === "team4_tech" ? 0 : (selectPlayCount>1?1:0);
             initFloatList();calcPrice();saveData();
-            // 新增选中提示
+            // 选中提示
             const play = window.playList.find(item=>item.pwd===pwd);
             alert(play ? `✅ 已选中：${play.name}` : "✅ 已选择：自动派单");
         }
+
         function autoDispatchOrder(order){
             const idlePlays = window.playList.filter(item=>item.status==="online" && item.orderStatus==="idle");
             if(idlePlays.length > 0){
@@ -544,20 +587,27 @@
                 return false;
             }
         }
+
         function delPlay(){
             const pwd = document.getElementById("addPlayId").value.trim();
-            if(!pwd||!window.playList.some(item=>item.pwd===pwd)){alert("账号不存在！");return;}
+            if(!pwd||!window.playList.some(item=>item.pwd===pwd)){
+                alert("❌ 陪玩账号不存在！");
+                return;
+            }
             const play = window.playList.find(item=>item.pwd===pwd);
             window.playList = window.playList.filter(item=>item.pwd!==pwd);
-            updatePlayManage();saveData();alert(`✅ 删除成功：${play.name}（账号：${pwd}）`);
+            updatePlayManage();saveData();
+            alert(`✅ 删除成功：${play.name}（账号：${pwd}）`);
             document.getElementById("addPlayId").value = "";
         }
+
         function setCount(num) {
             document.getElementById("count").value = num;
             document.querySelectorAll('.num-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector(`.num-btn[onclick="setCount(${num})"]`).classList.add('active');
             calcPrice();
         }
+
         function calcPrice(){
             const type=document.getElementById("serviceType").value,count=parseInt(document.getElementById("count").value)||1;
             const addGrail=document.getElementById("addGrail").checked,noGuarantee=document.getElementById("noGuarantee").checked;
@@ -569,6 +619,7 @@
             if(addGrail)price+=10;finalPrice=price+playSelectPrice;
             document.getElementById("finalPrice").innerText=finalPrice;
         }
+
         function createOrder(){
             if(!isBossBind){alert("⚠️ 请先绑定手机号！");return;}
             if(!hasUploadPayImg){alert("⚠️ 请先上传付款凭证！");return;}
@@ -582,6 +633,7 @@
             document.getElementById("checkAllOrder").innerHTML=`✅ 待审核订单：${orderId} | ¥${finalPrice}`;
             saveData();alert(`✅ 订单号：${orderId}\n已通知管理员审核！`);
         }
+
         function checkPayOk(){
             payCheckStatus = "ok";
             document.getElementById("payStatus").className = "status-tag status-ok";
@@ -589,6 +641,7 @@
             document.getElementById("checkAllOrder").innerHTML = `✅ 付款有效 | ¥${finalPrice} | 可审核订单`;
             alert("✅ 付款核验成功！");saveData();
         }
+
         function agreeOrder(){
             if(payCheckStatus !== "ok"){alert("⚠️ 请先核验付款真实性！");return;}
             const order = window.orderList[window.orderList.length-1];
@@ -606,6 +659,7 @@
             }
             saveData();initFloatList();getAdminData();
         }
+
         function reportProgress(){
             const num = document.getElementById("progressNum").value;
             if(!num)alert("⚠️ 输入完成局数！");
@@ -617,6 +671,7 @@
                 alert(`✅ 发起结单成功！\n完成${num}局，等待老板确认+管理员终审`);
             }
         }
+
         function giveScore(type){
             if(selectedPlayId==="auto"){alert("⚠️ 请先指定陪玩！");return;}
             const play=window.playList.find(item=>item.pwd===selectedPlayId);
@@ -630,12 +685,14 @@
             saveData();initFloatList();
             alert(`✅ ${type==='good'?'好评':type==='bad'?'差评':'投诉'}提交成功！已发起管理员终审`);
         }
+
         function changeStatus(status){
             const play=window.playList.find(item=>item.pwd===currentPlayId);
             play.status=status;document.getElementById("playStatus").innerText=status==="online"?"在线":"离线";
             document.getElementById("playStatus").className=status==="online"?"tip-green":"tip";
             initFloatList();saveData();alert(`✅ 已切换为${status}状态！`);
         }
+
         function getAdminData(){
             document.getElementById("todayMoney").innerText=Math.floor(Math.random()*2000);
             document.getElementById("todayOrder").innerText=window.orderList.length;
@@ -644,6 +701,7 @@
             document.getElementById("activePlay").innerText=onlineNum;
             document.getElementById("idlePlay").innerText=idleNum;
         }
+
         function updateActivityShow(){
             document.getElementById("activityName").innerText=activityName;
             document.getElementById("activePrice").innerText=activePrice;
@@ -651,56 +709,73 @@
             document.getElementById("activityStatus").className=isActivityOpen?"status-tag status-ok":"status-tag status-no";
             calcPrice();
         }
+
         function saveActivity(){
             activityName = document.getElementById("activityInput").value.trim();
             activePrice = document.getElementById("team4PriceInput").value || 2;
             isActivityOpen = true;updateActivityShow();saveData();alert("✅ 活动配置保存成功！");
         }
+
         function closeActivity(){isActivityOpen = false;updateActivityShow();calcPrice();saveData();alert("✅ 活动已关闭，恢复原价！");}
+
         function openPlayLogin(){document.getElementById("playLoginModal").style.display="flex";}
+
         function openAdminLogin(){document.getElementById("adminLoginModal").style.display="flex";}
+
         function playLogin() {
             const pwd = document.getElementById("playPwd").value.trim();
             const play = window.playList.find(item=>item.pwd===pwd);
-            if(!play){alert("密码错误！");return;}
-            if(play.deviceId && play.deviceId!==window.deviceId){alert("账号已在其他设备登录！");return;}
+            if(!play){alert("❌ 密码错误！");return;}
+            if(play.deviceId && play.deviceId!==window.deviceId){alert("❌ 账号已在其他设备登录！");return;}
             isPlayLogin=true;currentPlayId=pwd;document.getElementById("playLoginModal").style.display="none";switchTab("play");playBindCheck();
         }
+
         function adminLogin() {
             const pwd = document.getElementById("adminPwd").value.trim();
-            if(pwd!==window.adminPwd){alert("密码错误！");return;}
+            if(pwd!==window.adminPwd){alert("❌ 密码错误！");return;}
             isAdminLogin=true;document.getElementById("adminLoginModal").style.display="none";switchTab("admin");
         }
+
         function bossBindPhone() {
             const phone = document.getElementById("bossPhone").value.trim();
-            if(!/^1[3-9]\d{9}$/.test(phone)){alert("手机号格式错误！");return;}
+            if(!/^1[3-9]\d{9}$/.test(phone)){alert("❌ 手机号格式错误！");return;}
             window.bossInfo = {phone,deviceId:window.deviceId};
             document.getElementById("bossBindBox").style.display="none";
             document.getElementById("bossBindSuccess").style.display="block";
             document.getElementById("bossBindedPhone").innerText=phone;
             isBossBind=true;saveData();alert("✅ 老板绑定成功！");
         }
+
         function bossBindCheck(){if(window.bossInfo.phone&&window.bossInfo.deviceId===window.deviceId){isBossBind=true;document.getElementById("bossBindBox").style.display="none";document.getElementById("bossBindSuccess").style.display="block";document.getElementById("bossBindedPhone").innerText=window.bossInfo.phone;}}
+
         function bossUnbind(){window.bossInfo={phone:"",deviceId:""};document.getElementById("bossBindBox").style.display="block";document.getElementById("bossBindSuccess").style.display="none";saveData();}
+
         function playBindPhone() {
             const phone = document.getElementById("playPhone").value.trim();
-            if(!/^1[3-9]\d{9}$/.test(phone)){alert("手机号格式错误！");return;}
+            if(!/^1[3-9]\d{9}$/.test(phone)){alert("❌ 手机号格式错误！");return;}
             const play=window.playList.find(item=>item.pwd===currentPlayId);
             play.phone=phone;play.deviceId=window.deviceId;
             document.getElementById("playBindBox").style.display="none";document.getElementById("playBindSuccess").style.display="block";document.getElementById("playBindedPhone").innerText=phone;
             saveData();alert("✅ 陪玩绑定成功，免密登录！");
         }
+
         function playBindCheck(){const play=window.playList.find(item=>item.pwd===currentPlayId);if(play&&play.phone){document.getElementById("playBindBox").style.display="none";document.getElementById("playBindSuccess").style.display="block";document.getElementById("playBindedPhone").innerText=play.phone;}}
+
         function playUnbind(){const play=window.playList.find(item=>item.pwd===currentPlayId);play.phone="";play.deviceId="";document.getElementById("playBindBox").style.display="block";document.getElementById("playBindSuccess").style.display="none";saveData();}
+
         function switchTab(tab){
-            if(tab====="play"&&!isPlayLogin){openPlayLogin();return;}if(tab==="admin"&&!isAdminLogin){openAdminLogin();return;}
+            if(tab==="play"&&!isPlayLogin){openPlayLogin();return;}if(tab==="admin"&&!isAdminLogin){openAdminLogin();return;}
             currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
             document.querySelector(`.tab-btn[onclick="${tab==='boss'?'switchTab(\'boss\')':tab==='play'?'openPlayLogin()':'openAdminLogin()'}"]`).classList.add('active');
             document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(tab).classList.add('active');
         }
+
         function changeAdminPwd(){const pwd=document.getElementById("newAdminPwd").value.trim();if(!pwd)alert("⚠️ 输入新密码！");else{window.adminPwd=pwd;saveData();alert("✅ 密码修改成功！");document.getElementById("newAdminPwd").value="";}}
+
         function getOrder(){document.getElementById("orderList").innerHTML=window.orderList.length>0&&window.orderList[window.orderList.length-1].orderStatus==="已同意"?`✅ 订单：${window.orderList[window.orderList.length-1].id}`:"暂无有效订单";}
+
         function saveCode(){alert("✅ 收款码保存成功！");}
+
         // 页面加载初始化
         window.onload = ()=>{loadData();calcPrice();initFloatList();};
     </script>
