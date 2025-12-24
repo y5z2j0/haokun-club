@@ -59,9 +59,15 @@
         .status-no{background:#ff4444;color:#fff;}
         .order-record{padding:10px;border-radius:10px;background:#222;margin:10px 0;font-size:14px;}
         .manage-box{display:flex;gap:8px;margin:10px 0;}
+        /* 新增：修改密码弹窗样式 */
+        .modal{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:1001;}
+        .modal-content{width:90%;max-width:350px;background:#16213e;padding:20px;border-radius:15px;}
+        .modal-title{font-size:18px;font-weight:bold;margin-bottom:15px;text-align:center;}
+        .modal-close{position:absolute;top:15px;right:15px;font-size:20px;cursor:pointer;}
     </style>
 </head>
 <body>
+    <!-- 陪玩登录弹窗 -->
     <div class="login-modal" id="playLoginModal">
         <div class="login-box">
             <div class="title">🔒 陪玩登录</div>
@@ -69,11 +75,23 @@
             <button class="btn" onclick="playLogin()">登录</button>
         </div>
     </div>
+    <!-- 管理员登录弹窗 -->
     <div class="login-modal" id="adminLoginModal">
         <div class="login-box">
             <div class="title">🔑 管理员登录</div>
             <input type="password" class="input" id="adminPwd" placeholder="输入密码">
             <button class="btn" onclick="adminLogin()">登录</button>
+        </div>
+    </div>
+    <!-- 新增：修改陪玩密码弹窗 -->
+    <div class="modal" id="editPlayPwdModal">
+        <div class="modal-content">
+            <div class="modal-title">修改陪玩密码</div>
+            <input type="hidden" id="targetPlayPwdId">
+            <div class="tip-green" id="editPlayName"></div>
+            <input type="password" class="input" id="newPlayPwd" placeholder="输入新密码">
+            <button class="btn btn-green" onclick="savePlayPwd()">确认修改</button>
+            <button class="btn btn-gray" onclick="closeModal('editPlayPwdModal')">取消</button>
         </div>
     </div>
 
@@ -82,17 +100,15 @@
         <button class="tab-btn" onclick="openPlayLogin()">陪玩接单端</button>
         <button class="tab-btn" onclick="openAdminLogin()">管理员端</button>
     </div>
-
     <div class="content">
+        <!-- 老板端 -->
         <div class="page active" id="boss">
-            <!-- 系统访问二维码 -->
             <div class="title">🎯 俱乐部访问入口【扫码进平台】</div>
             <div class="tip-green">✅ 此码非付款码，转发给老板/陪玩扫码直接进入</div>
             <div class="qrcode-box">
                 <img src="https://s41.ax1x.com/2025/12/24/pZG6x4f.png" class="qrcode" alt="系统访问二维码">
                 <div class="tip-green">好困俱乐部系统入口</div>
             </div>
-
             <div class="title">✅ 好困俱乐部-陪玩价格表</div>
             <div class="tip-green" id="activityName">🎄圣诞特惠：4队技术2r/局，无小时单</div>
             <div class="tip-green">💡 4队技术单→对应陪玩免费无限指定 | 摸金单按规则计费 | 未指定单自动派空闲陪玩</div>
@@ -106,7 +122,6 @@
                 <div class="tip-green">✅ 已绑定：<span id="bossBindedPhone"></span></div>
                 <button class="btn btn-gray" onclick="bossUnbind()">解除绑定</button>
             </div>
-
             <div class="title">📋 选择服务</div>
             <select class="select" id="serviceType" onchange="calcPrice()">
                 <option value="team4_tech">4队技术 - 4r/局（活动价<span id="activePrice">2</span>r）✅ 免费指定</option>
@@ -118,7 +133,6 @@
                 <option value="stomach_mid">胃袋中 -10r/150w</option>
                 <option value="stomach_big">胃袋大 -25r/200w</option>
             </select>
-
             <div class="title">🔢 选择局数</div>
             <div class="num-btn-box">
                 <div class="num-btn active" onclick="setCount(1)">1局</div>
@@ -131,7 +145,6 @@
             <input type="checkbox" id="addGrail" onchange="calcPrice()"> <label>圣杯补费+10r</label>
             <input type="checkbox" id="noGuarantee" onchange="calcPrice()"> <label>胃袋不保底（加价）</label>
             <div class="price">💰 应付总价：¥<span id="finalPrice">0</span></div>
-
             <!-- 收款码 -->
             <div class="title">💴 扫码付款【纯付款无跳转】</div>
             <div class="tip">⚠️ 此码仅付款，微信/支付宝扫码直接付款</div>
@@ -145,20 +158,18 @@
                     <div class="tip-green">支付宝付款</div>
                 </div>
             </div>
-
-            <!-- 付款凭证上传 -->
+            <!-- 付款凭证上传（修复核心） -->
             <div class="title">📸 上传付款凭证【必传】</div>
             <div class="upload-box" onclick="document.getElementById('payImg').click()">
                 <div id="uploadTip">点击上传付款截图</div>
+                <!-- 新增：预览图容器 -->
+                <div id="imgPreview" style="margin-top:10px;display:none;"></div>
                 <input type="file" id="payImg" accept="image/*" style="display:none;" onchange="uploadPayImg(this)">
             </div>
-
             <button class="btn btn-gray" id="createOrderBtn" onclick="createOrder()">✅ 已付款，生成订单号</button>
             <div class="status-tag status-wait" id="payStatus">付款状态：待上传凭证</div>
-
             <div class="title">📝 我的订单</div>
             <div id="bossOrderRecord" class="order-record">暂无订单，核验后自动生成</div>
-
             <div class="title">⭐ 结单确认+评价/投诉【服务完成后操作】</div>
             <div class="tip">✅ 陪玩发起结单后，点击下方完成确认+评价，自动提交管理员终审</div>
             <div style="display:flex;gap:5px;margin:10px 0;">
@@ -166,18 +177,17 @@
                 <button class="btn-sm" onclick="giveScore('bad')">差评+确认结单</button>
                 <button class="btn-sm btn-red" onclick="giveScore('complain')">投诉+1元+确认结单</button>
             </div>
-
             <div class="title">💬 订单聊天【结单后自动切换管理员对话】</div>
             <div class="chat-box" id="bossChat"></div>
             <input type="text" class="input" id="bossChatInput" placeholder="禁止发联系方式">
             <button class="btn-sm" onclick="sendBossMsg()">发送</button>
         </div>
 
+        <!-- 陪玩端 -->
         <div class="page" id="play">
             <div class="title">📢 待接订单【管理员审核后显示】</div>
             <div id="orderList">✅ 暂无有效订单</div>
             <button class="btn" onclick="getOrder()">刷新订单</button>
-
             <div class="title">📱 账号绑定</div>
             <div id="playBindBox">
                 <input type="tel" class="input" id="playPhone" placeholder="输入手机号绑定">
@@ -187,45 +197,45 @@
                 <div class="tip-green">✅ 已绑定：<span id="playBindedPhone"></span></div>
                 <button class="btn btn-gray" onclick="playUnbind()">解除绑定</button>
             </div>
-
             <div class="title">⚡ 接单状态【在线/离线/接单中】</div>
             <button class="btn btn-green" onclick="changeStatus('online')">在线接单</button>
             <button class="btn btn-red" onclick="changeStatus('offline')">离线休息</button>
             <div class="tip">当前状态：<span class="tip-green" id="playStatus">在线</span></div>
-
             <div class="title">📊 发起结单【服务完成后上报】</div>
             <div class="tip-green">✅ 上报后自动发起结单，等待老板确认+管理员终审，终审后自动恢复空闲</div>
             <input type="number" class="input" id="progressNum" placeholder="输入完成局数">
             <button class="btn btn-green" onclick="reportProgress()">✅ 完成服务，发起结单</button>
-
-            <div class="title">💴 提现中心</div>
+            <div class="title">💴 提现中心（修复：扣减余额）</div>
             <div>累计收入：¥<span id="playMoney">0</span></div>
             <input type="number" class="input" id="withdrawNum" placeholder="输入提现金额">
             <button class="btn" onclick="withdraw()">提交提现申请</button>
-
             <div class="title">💬 与老板聊天【结单后自动退出】</div>
             <div class="chat-box" id="playChat"></div>
             <input type="text" class="input" id="playChatInput" placeholder="禁止发联系方式">
             <button class="btn-sm" onclick="sendPlayMsg()">发送</button>
         </div>
 
+        <!-- 管理员端（新增：修改密码按钮） -->
         <div class="page" id="admin">
             <div class="title">🎯 系统访问二维码【转发全员】</div>
             <div class="qrcode-box">
                 <img src="https://s41.ax1x.com/2025/12/24/pZG6x4f.png" class="qrcode" alt="系统访问二维码">
                 <div class="tip-green">扫码进入，老板/陪玩通用</div>
             </div>
-
-            <div class="title">👥 陪玩账号管理【上限50人，网页操作】</div>
-            <div class="tip-green">✅ 直接添加/删除，实时同步悬浮窗，无需改代码</div>
+            <div class="title">👥 陪玩账号管理【上限50人，支持改密码】</div>
+            <div class="tip-green">✅ 直接添加/删除/改密码，实时同步悬浮窗，无需改代码</div>
             <input type="text" class="input" id="addPlayId" placeholder="输入陪玩账号（例：003/004）">
             <div class="manage-box">
                 <button class="btn btn-green" onclick="addPlay()">➕ 添加陪玩账号</button>
                 <button class="btn btn-red" onclick="delPlay()">➖ 删除选中陪玩</button>
             </div>
             <div class="tip-green">已添加：<span id="playCount">2</span>/50 人</div>
-            <div class="order-record" id="playListShow">当前陪玩：001、002</div>
-
+            <!-- 修复：陪玩列表显示修改密码按钮 -->
+            <div class="order-record" id="playListShow">
+                当前陪玩：<br>
+                001（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('001')">改密码</button>）、
+                002（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('002')">改密码</button>）
+            </div>
             <div class="title">🎡 活动可视化配置【无需改代码，一键生效】</div>
             <input type="text" class="input" id="activityInput" placeholder="输入活动名称" value="圣诞特惠：4队技术2r/局，无小时单">
             <input type="number" class="input" id="team4PriceInput" placeholder="4队技术活动单价" value="2">
@@ -234,7 +244,6 @@
                 <button class="btn btn-red" onclick="closeActivity()">❌ 关闭活动（恢复原价）</button>
             </div>
             <div class="status-tag status-ok" id="activityStatus">✅ 活动已开启</div>
-
             <div class="title">✅ 核心审核中心【付款核验+订单审核+结单终审】</div>
             <div class="tip-red">⚠️ 付款核验→订单审核→结单终审，三步闭环，全程可控</div>
             <div id="checkAllOrder" class="order-record">暂无待审核付款/订单</div>
@@ -243,29 +252,24 @@
                 <button class="btn" onclick="agreeOrder()">✅ 同意订单（陪玩可接）</button>
                 <button class="btn btn-green" onclick="finalConfirmOrder()">✅ 终审结单（恢复空闲+销毁聊天）</button>
             </div>
-
             <div class="title">💴 收款码管理</div>
             <input type="text" class="input" id="wxCode" value="https://s41.ax1x.com/2025/12/24/pZG58Y9.png">
             <input type="text" class="input" id="zfbCode" value="https://s41.ax1x.com/2025/12/24/pZG5GWR.jpg">
             <button class="btn" onclick="saveCode()">保存收款码</button>
-
             <div class="title">📈 运营数据看板</div>
             <div class="order-record">今日营收：¥<span id="todayMoney">0</span></div>
             <div class="order-record">今日有效订单：<span id="todayOrder">0</span>单</div>
             <div class="order-record">在线陪玩：<span class="tip-green" id="activePlay">0</span>人 | 空闲陪玩：<span id="idlePlay">0</span>人</div>
             <button class="btn" onclick="getAdminData()">刷新数据</button>
-
             <div class="title">💬 管理员对话【结单后自动接入老板】</div>
             <div class="chat-box" id="adminChat"></div>
             <input type="text" class="input" id="adminChatInput" placeholder="与老板确认结单事宜">
             <button class="btn-sm" onclick="sendAdminMsg()">发送</button>
-
             <div class="title">🔒 管理员密码修改</div>
             <input type="password" class="input" id="newAdminPwd" placeholder="输入新密码">
             <button class="btn" onclick="changeAdminPwd()">修改密码</button>
         </div>
     </div>
-
     <div class="play-float-btn" onclick="toggleFloatList()">🎮</div>
     <div class="play-float-list" id="playFloatList"></div>
 
@@ -278,21 +282,35 @@
         const MAX_PLAY = 50, ADMIN_DEFAULT_PWD = "admin888";
         const forbidWords = ["加好友","私加","微信","QQ","微❤","绿泡泡","V","q"];
 
-        // 初始化：陪玩含【空闲/接单中/待结单】全状态，支持三重结单
+        // 初始化
         function loadData() {
-            window.playList = JSON.parse(localStorage.getItem("hk_playList")) || [{pwd:"001",name:"陪玩001",status:"online",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""},{pwd:"002",name:"陪玩002",status:"offline",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""}];
-            window.adminPwd = localStorage.getItem("hk_adminPwd") || ADMIN_DEFAULT_PWD;
-            window.bossInfo = JSON.parse(localStorage.getItem("hk_bossInfo")) || {phone:"",deviceId:""};
-            window.orderList = JSON.parse(localStorage.getItem("hk_orderList")) || [];
-            window.historyOrders = JSON.parse(localStorage.getItem("hk_historyOrders")) || [];
-            window.deviceId = localStorage.getItem("hk_deviceId") || Math.random().toString(36).substr(2,10);
-            isActivityOpen = localStorage.getItem("hk_isActivity") === "true" || true;
-            activePrice = localStorage.getItem("hk_activePrice") || 2;
-            activityName = localStorage.getItem("hk_activityName") || "🎄圣诞特惠：4队技术2r/局，无小时单";
+            try {
+                // 修复：本地存储解析容错
+                window.playList = JSON.parse(localStorage.getItem("hk_playList")) || [{pwd:"001",name:"陪玩001",status:"online",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""},{pwd:"002",name:"陪玩002",status:"offline",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""}];
+                window.adminPwd = localStorage.getItem("hk_adminPwd") || ADMIN_DEFAULT_PWD;
+                window.bossInfo = JSON.parse(localStorage.getItem("hk_bossInfo")) || {phone:"",deviceId:""};
+                window.orderList = JSON.parse(localStorage.getItem("hk_orderList")) || [];
+                window.historyOrders = JSON.parse(localStorage.getItem("hk_historyOrders")) || [];
+                window.deviceId = localStorage.getItem("hk_deviceId") || Math.random().toString(36).substr(2,10);
+                isActivityOpen = localStorage.getItem("hk_isActivity") === "true" || true;
+                activePrice = localStorage.getItem("hk_activePrice") || 2;
+                activityName = localStorage.getItem("hk_activityName") || "🎄圣诞特惠：4队技术2r/局，无小时单";
+            } catch (e) {
+                // 数据损坏时重置
+                localStorage.clear();
+                window.playList = [{pwd:"001",name:"陪玩001",status:"online",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""},{pwd:"002",name:"陪玩002",status:"offline",orderStatus:"idle",good:0,bad:0,money:0,phone:"",deviceId:""}];
+                window.adminPwd = ADMIN_DEFAULT_PWD;
+                window.bossInfo = {phone:"",deviceId:""};
+                window.orderList = [];
+                window.historyOrders = [];
+                window.deviceId = Math.random().toString(36).substr(2,10);
+                alert("⚠️ 本地数据异常，已重置系统！");
+            }
             localStorage.setItem("hk_deviceId", window.deviceId);
             initFloatList();bossBindCheck();playBindCheck();calcPrice();autoPlayLogin();
             updatePlayManage();updateActivityShow();getAdminData();
         }
+
         function saveData() {
             localStorage.setItem("hk_playList",JSON.stringify(window.playList));
             localStorage.setItem("hk_adminPwd",window.adminPwd);
@@ -304,7 +322,181 @@
             localStorage.setItem("hk_activityName",activityName);
         }
 
-        // 悬浮窗开关+50人顺滑滚动
+        // 1. 修复：付款凭证上传无反应（核心修改）
+        function uploadPayImg(el) {
+            if (!el.files.length) return;
+            const file = el.files[0];
+            const previewBox = document.getElementById("imgPreview");
+            const uploadTip = document.getElementById("uploadTip");
+            
+            // 校验文件类型（仅图片）
+            const allowTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+            if (!allowTypes.includes(file.type)) {
+                alert("❌ 仅支持 JPG/PNG/GIF/WEBP 格式图片！");
+                el.value = "";
+                return;
+            }
+
+            // 校验文件大小（≤5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                alert("❌ 图片大小不能超过5MB，请压缩后上传！");
+                el.value = "";
+                return;
+            }
+
+            // 预览图片（让用户确认上传成功）
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewBox.style.display = "block";
+                previewBox.innerHTML = `<img src="${e.target.result}" style="width:120px;height:auto;border-radius:8px;">`;
+                uploadTip.innerHTML = "✅ 凭证上传成功！等待管理员核验";
+                
+                // 保存图片数据到本地（用于核验）
+                window.payImgData = e.target.result;
+                hasUploadPayImg = true;
+                
+                // 激活生成订单按钮
+                document.getElementById("createOrderBtn").className = "btn";
+                document.getElementById("payStatus").className = "status-tag status-wait";
+                document.getElementById("payStatus").innerText = "付款状态：待管理员核验";
+                
+                // 同步到管理员审核中心（显示预览）
+                const bossPhone = window.bossInfo.phone || "未绑定";
+                document.getElementById("checkAllOrder").innerHTML = `⚠️ 新付款待核验 | 金额¥${finalPrice} | 老板手机号：${bossPhone}<br><img src="${e.target.result}" style="width:80px;height:auto;border-radius:8px;margin-top:5px;">`;
+                alert("✅ 付款凭证上传成功，请等待管理员核验！");
+            };
+            reader.readAsDataURL(file);
+            el.value = ""; // 重置输入，允许重复上传
+        }
+
+        // 2. 修复：陪玩自动登录重复触发
+        function autoPlayLogin() {
+            if (isPlayLogin) return; // 已登录则跳过
+            const play = window.playList.find(item=>item.deviceId===window.deviceId);
+            if(play){
+                isPlayLogin=true;
+                currentPlayId=play.pwd;
+                switchTab("play");
+                playBindCheck();
+            }
+        }
+
+        // 3. 修复：提现功能无余额扣减
+        function withdraw(){
+            const num = parseFloat(document.getElementById("withdrawNum").value);
+            if(!num || num<=0){
+                alert("⚠️ 输入有效提现金额！");
+                return;
+            }
+            const play = window.playList.find(item=>item.pwd===currentPlayId);
+            if(num > play.money){
+                alert(`⚠️ 提现金额不能超过余额！当前余额：¥${play.money}`);
+                return;
+            }
+            // 扣减余额
+            play.money -= num;
+            document.getElementById("playMoney").innerText = play.money;
+            saveData();
+            alert(`✅ 提现申请提交：¥${num}\n剩余余额：¥${play.money}`);
+            document.getElementById("withdrawNum").value = "";
+        }
+
+        // 4. 修复：聊天系统未滚动到最新消息
+        function sendBossMsg(){
+            const msg=document.getElementById("bossChatInput").value.trim();
+            if(!msg||forbidWords.some(w=>msg.includes(w))){alert("❌ 违规内容！");return;}
+            const order = window.orderList[window.orderList.length-1];
+            const chatBox = document.getElementById("bossChat");
+            
+            if(order&&order.orderStatus==="待管理员最终确认结单"){
+                chatBox.innerHTML += `<div class="chat-msg msg-me">老板：${msg}</div>`;
+                document.getElementById("adminChat").innerHTML += `<div class="chat-msg msg-other">老板：${msg}</div>`;
+            }else{
+                chatBox.innerHTML += `<div class="chat-msg msg-me">老板：${msg}</div>`;
+                document.getElementById("playChat").innerHTML += `<div class="chat-msg msg-other">老板：${msg}</div>`;
+            }
+            document.getElementById("bossChatInput").value = "";
+            chatBox.scrollTop = chatBox.scrollHeight; // 滚动到最新消息
+        }
+        function sendPlayMsg(){
+            const msg=document.getElementById("playChatInput").value.trim();
+            if(!msg||forbidWords.some(w=>msg.includes(w))){alert("❌ 违规内容！");return;}
+            const chatBox = document.getElementById("playChat");
+            chatBox.innerHTML += `<div class="chat-msg msg-me">陪玩：${msg}</div>`;
+            document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-other">陪玩：${msg}</div>`;
+            document.getElementById("playChatInput").value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        function sendAdminMsg(){
+            const msg=document.getElementById("adminChatInput").value.trim();
+            if(!msg||forbidWords.some(w=>msg.includes(w))){alert("❌ 违规内容！");return;}
+            const chatBox = document.getElementById("adminChat");
+            chatBox.innerHTML += `<div class="chat-msg msg-me">管理员：${msg}</div>`;
+            document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-other">管理员：${msg}</div>`;
+            document.getElementById("adminChatInput").value = "";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 5. 修复：管理员终审结单未重置选中陪玩
+        function finalConfirmOrder(){
+            const order = window.orderList[window.orderList.length-1];
+            if(!order||order.orderStatus!="待管理员最终确认结单"){alert("⚠️ 无待终审订单！");return;}
+            
+            const play=window.playList.find(item=>item.pwd===order.playId);
+            play.orderStatus = "idle";
+            play.money += finalPrice;
+            document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-other">管理员：结单终审通过！陪玩已恢复空闲，聊天即将关闭</div>`;
+            
+            setTimeout(()=>{
+                document.getElementById("bossChat").innerHTML = "";
+                document.getElementById("playChat").innerHTML = "";
+                document.getElementById("adminChat").innerHTML = "";
+                
+                window.historyOrders.push({...order, finalPrice: finalPrice});
+                window.orderList.pop();
+                selectedPlayId = "auto"; // 重置选中陪玩
+                saveData();
+                alert("✅ 结单完成！\n陪玩恢复空闲+聊天销毁+订单归档");
+            },3000);
+            initFloatList();getAdminData();saveData();
+        }
+
+        // 6. 新增：陪玩密码修改功能（管理员端）
+        function openEditPlayPwdModal(pwd){
+            const play = window.playList.find(item=>item.pwd===pwd);
+            if(!play) return;
+            document.getElementById("targetPlayPwdId").value = pwd;
+            document.getElementById("editPlayName").innerText = `当前陪玩：${play.name}`;
+            document.getElementById("newPlayPwd").value = "";
+            document.getElementById("editPlayPwdModal").style.display = "flex";
+        }
+        function savePlayPwd(){
+            const pwd = document.getElementById("targetPlayPwdId").value;
+            const newPwd = document.getElementById("newPlayPwd").value.trim();
+            if(!newPwd){alert("⚠️ 新密码不能为空！");return;}
+            const play = window.playList.find(item=>item.pwd===pwd);
+            play.pwd = newPwd; // 更新密码
+            saveData();
+            updatePlayManage(); // 刷新陪玩列表
+            closeModal("editPlayPwdModal");
+            alert(`✅ 陪玩${play.name}密码修改成功！新密码：${newPwd}`);
+        }
+        function closeModal(modalId){
+            document.getElementById(modalId).style.display = "none";
+        }
+
+        // 7. 修复：陪玩列表显示（含修改密码按钮）
+        function updatePlayManage(){
+            document.getElementById("playCount").innerText = window.playList.length;
+            let playStr = "";
+            window.playList.forEach(item=>{
+                playStr += `${item.pwd}（<button class="btn-sm btn-green" onclick="openEditPlayPwdModal('${item.pwd}')">改密码</button>）、`;
+            });
+            document.getElementById("playListShow").innerText = `当前陪玩：${playStr.slice(0,-1)}`;
+            initFloatList();
+        }
+
+        // 原有功能保留（未修改部分）
         function toggleFloatList(){
             const list = document.getElementById("playFloatList");
             list.style.display = list.style.display==="block"?"none":"block";
@@ -321,16 +513,15 @@
                 list.innerHTML += `<div class="float-play-item ${cls} ${active}" onclick="selectPlay('${item.pwd}')">${item.name}【${item.orderStatus==='working'?'接单中':item.status==='online'?'在线':'离线'}】</div>`;
             });
         }
-
-        // ✅ 核心：4队技术单免费无限指定 | 摸金单按规则计费
         function selectPlay(pwd) {
             selectedPlayId = pwd;selectPlayCount++;
             const serviceType = document.getElementById("serviceType").value;
             playSelectPrice = serviceType === "team4_tech" ? 0 : (selectPlayCount>1?1:0);
             initFloatList();calcPrice();saveData();
+            // 新增选中提示
+            const play = window.playList.find(item=>item.pwd===pwd);
+            alert(play ? `✅ 已选中：${play.name}` : "✅ 已选择：自动派单");
         }
-
-        // ✅ 自动派单规则：仅推空闲陪玩，全员忙则排单，派单后自动切接单中
         function autoDispatchOrder(order){
             const idlePlays = window.playList.filter(item=>item.status==="online" && item.orderStatus==="idle");
             if(idlePlays.length > 0){
@@ -343,14 +534,6 @@
                 alert(`⚠️ 当前无空闲陪玩，已加入排单队列！\n订单号：${order.id}`);
                 return false;
             }
-        }
-
-        // ✅ 陪玩账号管理（50人上限）
-        function updatePlayManage(){
-            document.getElementById("playCount").innerText = window.playList.length;
-            let playStr = "";window.playList.forEach(item=>playStr += item.pwd + "、");
-            document.getElementById("playListShow").innerText = `当前陪玩：${playStr.slice(0,-1)}`;
-            initFloatList();
         }
         function addPlay(){
             const pwd = document.getElementById("addPlayId").value.trim();
@@ -367,8 +550,6 @@
             updatePlayManage();saveData();alert(`✅ 删除成功：${pwd}`);
             document.getElementById("addPlayId").value = "";
         }
-
-        // 局数选择+价格核算
         function setCount(num) {
             document.getElementById("count").value = num;
             document.querySelectorAll('.num-btn').forEach(btn => btn.classList.remove('active'));
@@ -386,8 +567,6 @@
             if(addGrail)price+=10;finalPrice=price+playSelectPrice;
             document.getElementById("finalPrice").innerText=finalPrice;
         }
-
-        // ✅ 订单生成+审核，接单后【自动切换为接单中】
         function createOrder(){
             if(!isBossBind){alert("⚠️ 请先绑定手机号！");return;}
             if(!hasUploadPayImg){alert("⚠️ 请先上传付款凭证！");return;}
@@ -412,7 +591,6 @@
             if(payCheckStatus !== "ok"){alert("⚠️ 请先核验付款真实性！");return;}
             const order = window.orderList[window.orderList.length-1];
             if(!order)return;order.orderStatus = "已同意";
-            // 指定陪玩 → 自动切【接单中】
             if(selectedPlayId !== "auto"){
                 const targetPlay = window.playList.find(item=>item.pwd===selectedPlayId);
                 if(targetPlay){
@@ -426,9 +604,6 @@
             }
             saveData();initFloatList();getAdminData();
         }
-
-        // ✅ 三重结单核心【全程自动切状态】
-        // 1.陪玩发起结单 → 状态变【待老板评价】
         function reportProgress(){
             const num = document.getElementById("progressNum").value;
             if(!num)alert("⚠️ 输入完成局数！");
@@ -440,7 +615,6 @@
                 alert(`✅ 发起结单成功！\n完成${num}局，等待老板确认+管理员终审`);
             }
         }
-        // 2.老板确认+评价 → 状态变【待管理员终审】，聊天开始屏蔽陪玩
         function giveScore(type){
             if(selectedPlayId==="auto"){alert("⚠️ 请先指定陪玩！");return;}
             const play=window.playList.find(item=>item.pwd===selectedPlayId);
@@ -454,67 +628,12 @@
             saveData();initFloatList();
             alert(`✅ ${type==='good'?'好评':type==='bad'?'差评':'投诉'}提交成功！已发起管理员终审`);
         }
-        // 3.管理员终审结单 → 陪玩【自动切空闲】+聊天踢陪玩+销毁订单+归档
-        function finalConfirmOrder(){
-            const order = window.orderList[window.orderList.length-1];
-            if(!order||order.orderStatus!="待管理员最终确认结单"){alert("⚠️ 无待终审订单！");return;}
-            
-            const play=window.playList.find(item=>item.pwd===order.playId);
-            play.orderStatus = "idle";
-            play.money += finalPrice;
-
-            document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-other">管理员：结单终审通过！陪玩已恢复空闲，聊天即将关闭</div>`;
-            setTimeout(()=>{
-                document.getElementById("bossChat").innerHTML = "";
-                document.getElementById("playChat").innerHTML = "";
-                document.getElementById("adminChat").innerHTML = "";
-                
-                window.historyOrders.push(order);
-                window.orderList.pop();
-                saveData();
-                alert("✅ 结单完成！\n陪玩恢复空闲+聊天销毁+订单归档");
-            },3000);
-            initFloatList();getAdminData();saveData();
-        }
-
-        // ✅ 聊天系统升级：结单后自动踢陪玩，管理员无缝接入，终审后销毁
-        function sendBossMsg(){
-            const msg=document.getElementById("bossChatInput").value.trim();
-            if(!msg||forbidWords.some(w=>msg.includes(w))){alert("❌ 违规内容！");return;}
-            const order = window.orderList[window.orderList.length-1];
-            
-            if(order&&order.orderStatus==="待管理员最终确认结单"){
-                document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-me">老板：${msg}</div>`;
-                document.getElementById("adminChat").innerHTML += `<div class="chat-msg msg-other">老板：${msg}</div>`;
-            }else{
-                document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-me">老板：${msg}</div>`;
-                document.getElementById("playChat").innerHTML += `<div class="chat-msg msg-other">老板：${msg}</div>`;
-            }
-            document.getElementById("bossChatInput").value = "";
-        }
-        function sendPlayMsg(){
-            const msg=document.getElementById("playChatInput").value.trim();
-            if(!msg||forbidWords.some(w=>msg.includes(w))){alert("❌ 违规内容！");return;}
-            document.getElementById("playChat").innerHTML += `<div class="chat-msg msg-me">陪玩：${msg}</div>`;
-            document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-other">陪玩：${msg}</div>`;
-            document.getElementById("playChatInput").value = "";
-        }
-        function sendAdminMsg(){
-            const msg=document.getElementById("adminChatInput").value.trim();
-            if(!msg||forbidWords.some(w=>msg.includes(w))){alert("❌ 违规内容！");return;}
-            document.getElementById("adminChat").innerHTML += `<div class="chat-msg msg-me">管理员：${msg}</div>`;
-            document.getElementById("bossChat").innerHTML += `<div class="chat-msg msg-other">管理员：${msg}</div>`;
-            document.getElementById("adminChatInput").value = "";
-        }
-
-        // 其他功能全保留：状态切换/提现/数据看板/活动配置
         function changeStatus(status){
             const play=window.playList.find(item=>item.pwd===currentPlayId);
             play.status=status;document.getElementById("playStatus").innerText=status==="online"?"在线":"离线";
             document.getElementById("playStatus").className=status==="online"?"tip-green":"tip";
             initFloatList();saveData();alert(`✅ 已切换为${status}状态！`);
         }
-        function withdraw(){const num=document.getElementById("withdrawNum").value;if(!num||num<=0)alert("⚠️ 输入有效提现金额！");else alert(`✅ 提现申请提交：¥${num}`);}
         function getAdminData(){
             document.getElementById("todayMoney").innerText=Math.floor(Math.random()*2000);
             document.getElementById("todayOrder").innerText=window.orderList.length;
@@ -535,7 +654,7 @@
             activePrice = document.getElementById("team4PriceInput").value || 2;
             isActivityOpen = true;updateActivityShow();saveData();alert("✅ 活动配置保存成功！");
         }
-        function closeActivity(){isActivityOpen = false;updateActivityShow();saveData();alert("✅ 活动已关闭，恢复原价！");}
+        function closeActivity(){isActivityOpen = false;updateActivityShow();calcPrice();saveData();alert("✅ 活动已关闭，恢复原价！");}
         function openPlayLogin(){document.getElementById("playLoginModal").style.display="flex";}
         function openAdminLogin(){document.getElementById("adminLoginModal").style.display="flex";}
         function playLogin() {
@@ -571,16 +690,6 @@
         }
         function playBindCheck(){const play=window.playList.find(item=>item.pwd===currentPlayId);if(play&&play.phone){document.getElementById("playBindBox").style.display="none";document.getElementById("playBindSuccess").style.display="block";document.getElementById("playBindedPhone").innerText=play.phone;}}
         function playUnbind(){const play=window.playList.find(item=>item.pwd===currentPlayId);play.phone="";play.deviceId="";document.getElementById("playBindBox").style.display="block";document.getElementById("playBindSuccess").style.display="none";saveData();}
-        function uploadPayImg(el) {
-            if(!el.files.length) return;
-            hasUploadPayImg = true;
-            document.getElementById("uploadTip").innerHTML = "✅ 凭证上传成功！等待管理员核验";
-            document.getElementById("createOrderBtn").className = "btn";
-            document.getElementById("payStatus").className = "status-tag status-wait";
-            document.getElementById("payStatus").innerText = "付款状态：待管理员核验";
-            document.getElementById("checkAllOrder").innerHTML = `⚠️ 新付款待核验 | 金额¥${finalPrice} | 老板手机号：${window.bossInfo.phone}`;
-            alert("✅ 付款凭证上传成功，请等待核验！");
-        }
         function switchTab(tab){
             if(tab==="play"&&!isPlayLogin){openPlayLogin();return;}if(tab==="admin"&&!isAdminLogin){openAdminLogin();return;}
             currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -588,10 +697,10 @@
             document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(tab).classList.add('active');
         }
         function changeAdminPwd(){const pwd=document.getElementById("newAdminPwd").value.trim();if(!pwd)alert("⚠️ 输入新密码！");else{window.adminPwd=pwd;saveData();alert("✅ 密码修改成功！");document.getElementById("newAdminPwd").value="";}}
-        function autoPlayLogin(){const play=window.playList.find(item=>item.deviceId===window.deviceId);if(play){isPlayLogin=true;currentPlayId=play.pwd;switchTab("play");playBindCheck();}}
         function getOrder(){document.getElementById("orderList").innerHTML=window.orderList.length>0&&window.orderList[window.orderList.length-1].orderStatus==="已同意"?`✅ 订单：${window.orderList[window.orderList.length-1].id}`:"暂无有效订单";}
         function saveCode(){alert("✅ 收款码保存成功！");}
 
+        // 页面加载初始化
         window.onload = ()=>{loadData();calcPrice();initFloatList();};
     </script>
 </body>
