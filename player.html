@@ -889,6 +889,7 @@
                     <button class="admin-btn success" onclick="unbindPlayerDevice()">解除设备绑定</button>
                     <button class="admin-btn warning" onclick="resetPlayerData()">重置陪玩数据（订单/统计）</button>
                     <button class="admin-btn danger" onclick="clearPlayerRating()">清除陪玩评价（测试用）</button>
+                    <button class="admin-btn danger" onclick="resetAllPlayerData()">重置所有陪玩数据（清零）</button>
                 </div>
                 <div class="admin-tip">修改后陪玩需重新登录生效</div>
             </div>
@@ -950,10 +951,10 @@
             '150', '151', '152', '157', '158', '159', '182', '183', '184', '187', '188'
         ];
         const VIOLATION_FINE = 10;
-        const DEVICE_ID = generateDeviceId(); // 设备唯一标识
-        const ORDER_AMOUNT = 50; // 每个订单固定金额（可根据实际需求修改）
+        const DEVICE_ID = generateDeviceId();
+        const ORDER_AMOUNT = 50; // 每个订单固定金额
         
-        // 全局状态（从本地存储加载）
+        // 全局状态（初始化全部清零）
         let currentRole = 'player';
         let loginPlayer = null;
         let isAdminLogin = false;
@@ -962,11 +963,11 @@
         let playerNotifications = [];
         let currentChatOrder = '';
         let playerViolations = {};
-        let playerRatings = {}; // 陪玩评价记录（仅老板端提交）
+        let playerRatings = {};
         let selectedRatingStar = 0;
         let currentRatingOrder = '';
-        let playerWithdrawRecords = {}; // 陪玩提款记录
-        let playerBalances = {}; // 陪玩可提款余额
+        let playerWithdrawRecords = {};
+        let playerBalances = {};
         
         // 本地存储键名
         const STORAGE_KEYS = {
@@ -974,7 +975,7 @@
             orderList: 'hk_club_order_list',
             playerViolations: 'hk_club_player_violations',
             playerRatings: 'hk_club_player_ratings',
-            boundDevices: 'hk_club_bound_devices', // 设备绑定记录
+            boundDevices: 'hk_club_bound_devices',
             playerWithdrawRecords: 'hk_club_player_withdraw_records',
             playerBalances: 'hk_club_player_balances'
         };
@@ -988,9 +989,8 @@
             return newUuid;
         }
         
-        // 页面加载初始化（优先加载本地数据）
+        // 页面加载初始化（全部数据清零）
         window.addEventListener('DOMContentLoaded', function() {
-            // 绑定身份标签点击事件
             document.querySelectorAll('.identity-tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const role = this.getAttribute('data-role');
@@ -998,61 +998,60 @@
                 });
             });
             
-            loadDataFromLocalStorage();
+            // 强制初始化（清零所有数据）
+            initAllData();
             initSystem();
-            checkBoundDevice(); // 检查设备是否已绑定
-            // 实时同步老板端消息（每3秒轮询）
-            setInterval(() => {
-                if (loginPlayer) {
-                    syncOrderChat();
-                    syncPlayerStatus();
-                }
-            }, 3000);
+            checkBoundDevice();
         });
         
-        // 从本地存储加载数据（退出不丢失）
-        function loadDataFromLocalStorage() {
-            try {
-                const storedPlayers = localStorage.getItem(STORAGE_KEYS.playerList);
-                if (storedPlayers) playerList = JSON.parse(storedPlayers);
-                
-                const storedOrders = localStorage.getItem(STORAGE_KEYS.orderList);
-                if (storedOrders) orderList = JSON.parse(storedOrders);
-                else orderList = []; // 删除测试订单，初始为空
-                
-                const storedViolations = localStorage.getItem(STORAGE_KEYS.playerViolations);
-                if (storedViolations) playerViolations = JSON.parse(storedViolations);
-                
-                const storedRatings = localStorage.getItem(STORAGE_KEYS.playerRatings);
-                if (storedRatings) playerRatings = JSON.parse(storedRatings);
-                else initPlayerRatings();
-                
-                const storedBoundDevices = localStorage.getItem(STORAGE_KEYS.boundDevices);
-                if (!storedBoundDevices) localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify({}));
-                
-                const storedWithdrawRecords = localStorage.getItem(STORAGE_KEYS.playerWithdrawRecords);
-                if (storedWithdrawRecords) playerWithdrawRecords = JSON.parse(storedWithdrawRecords);
-                else initPlayerWithdrawRecords();
-                
-                const storedBalances = localStorage.getItem(STORAGE_KEYS.playerBalances);
-                if (storedBalances) playerBalances = JSON.parse(storedBalances);
-                else initPlayerBalances();
-                
-                if (!storedPlayers) generatePlayerList();
-                if (!storedViolations) initPlayerViolations();
-            } catch (e) {
-                console.error('加载本地数据失败：', e);
-                generatePlayerList();
-                orderList = [];
-                initPlayerViolations();
-                initPlayerRatings();
-                initPlayerWithdrawRecords();
-                initPlayerBalances();
-                localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify({}));
-            }
+        // 初始化所有数据（全部清零）
+        function initAllData() {
+            // 生成50个陪玩（初始状态全部清零）
+            playerList = Array.from({ length: 50 }, (_, index) => {
+                const playerId = `player_${index + 1}`;
+                // 陪玩名称关联服务类型：前20个为4队相关，后30个为其他（摸金等）
+                const name = index < 20 ? `陪玩${index + 1}（4队）` : `陪玩${index + 1}（摸金）`;
+                const gameType = index < 20 ? ['4队技术服务', '4队娱乐服务'][Math.floor(Math.random()*2)] : '摸金服务';
+                return {
+                    id: playerId,
+                    name: name,
+                    password: `pw${(index + 1).toString().padStart(6, '0')}`,
+                    status: 'offline',
+                    avatar: `https://via.placeholder.com/80?text=陪玩${index + 1}`,
+                    orders: [], // 接单记录清零
+                    unreadNotify: 0
+                };
+            });
+            
+            // 其他数据全部清零
+            orderList = [];
+            playerViolations = {};
+            playerRatings = {};
+            playerWithdrawRecords = {};
+            playerBalances = {};
+            
+            // 初始化关联数据
+            playerList.forEach(player => {
+                playerViolations[player.id] = { count: 0, reasons: [] };
+                playerRatings[player.id] = { total: 0, good: 0, bad: 0, list: [] };
+                playerWithdrawRecords[player.id] = [];
+                playerBalances[player.id] = 0;
+            });
+            
+            // 保存清零后的数据
+            saveDataToLocalStorage();
+            localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify({}));
         }
         
-        // 保存数据到本地存储（实时保存）
+        // 管理员：重置所有陪玩数据（强制清零）
+        function resetAllPlayerData() {
+            if (!confirm('确定要重置所有陪玩的订单、评价、余额数据吗？不可恢复！')) return;
+            initAllData();
+            alert('✅ 所有陪玩数据已全部清零！');
+            initAdminSelects();
+        }
+        
+        // 保存数据到本地存储
         function saveDataToLocalStorage() {
             try {
                 localStorage.setItem(STORAGE_KEYS.playerList, JSON.stringify(playerList));
@@ -1072,81 +1071,21 @@
             renderPlayerNotifications();
         }
         
-        // 生成50个陪玩账号（首次初始化用）
-        function generatePlayerList() {
-            playerList = Array.from({ length: 50 }, (_, index) => {
-                const playerId = `player_${index + 1}`;
-                return {
-                    id: playerId,
-                    name: `陪玩${index + 1}`,
-                    password: `pw${(index + 1).toString().padStart(6, '0')}`,
-                    status: 'offline',
-                    avatar: `https://via.placeholder.com/80?text=陪玩${index + 1}`,
-                    orders: [],
-                    unreadNotify: 0
-                };
-            });
-            saveDataToLocalStorage();
-        }
-        
-        // 初始化违规记录
-        function initPlayerViolations() {
-            playerList.forEach(player => {
-                playerViolations[player.id] = { count: 0, reasons: [] };
-            });
-            saveDataToLocalStorage();
-        }
-        
-        // 初始化评价记录
-        function initPlayerRatings() {
-            playerList.forEach(player => {
-                playerRatings[player.id] = {
-                    total: 0,
-                    good: 0,
-                    bad: 0,
-                    list: []
-                };
-            });
-            saveDataToLocalStorage();
-        }
-        
-        // 初始化提款记录
-        function initPlayerWithdrawRecords() {
-            playerList.forEach(player => {
-                playerWithdrawRecords[player.id] = [];
-            });
-            saveDataToLocalStorage();
-        }
-        
-        // 初始化陪玩余额
-        function initPlayerBalances() {
-            playerList.forEach(player => {
-                playerBalances[player.id] = 0;
-            });
-            saveDataToLocalStorage();
-        }
-        
         // 切换角色
         function switchRole(role) {
             currentRole = role;
-            
-            // 更新标签激活状态
             document.querySelectorAll('.identity-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.getAttribute('data-role') === role);
             });
-            
-            // 隐藏所有面板
             document.querySelectorAll('.panel').forEach(panel => {
                 panel.classList.remove('active');
             });
-            
-            // 显示对应角色的面板
             if (role === 'player') {
                 if (loginPlayer) {
                     document.querySelector('.player-function-panel').classList.add('active');
-                    renderPlayerRatings(); // 渲染评价
-                    renderWithdrawBalance(); // 渲染可提款余额
-                    renderWithdrawRecords(); // 渲染提款记录
+                    renderPlayerRatings();
+                    renderWithdrawBalance();
+                    renderWithdrawRecords();
                 } else {
                     document.querySelector('.player-login-panel').classList.add('active');
                 }
@@ -1159,47 +1098,16 @@
             }
         }
         
-        // 检查设备是否已绑定
-        function checkBoundDevice() {
-            const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
-            for (const [playerId, deviceId] of Object.entries(boundDevices)) {
-                if (deviceId === DEVICE_ID) {
-                    // 设备已绑定，自动登录
-                    const targetPlayer = playerList.find(p => p.id === playerId);
-                    if (targetPlayer) {
-                        loginPlayer = targetPlayer;
-                        document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
-                        document.querySelector('.player-function-panel').classList.add('active');
-                        document.getElementById('playerAvatar').src = targetPlayer.avatar;
-                        document.getElementById('playerName').innerText = targetPlayer.name;
-                        updatePlayerStatusDisplay();
-                        renderPlayerOrders();
-                        initPlayerChatSelect();
-                        renderPlayerRatings();
-                        renderWithdrawBalance();
-                        renderWithdrawRecords();
-                        
-                        alert(`✅ 设备已绑定，${targetPlayer.name}自动登录成功！`);
-                        return;
-                    }
-                }
-            }
-            // 未绑定，隐藏绑定提示
-            document.getElementById('playerBindTip').style.display = 'none';
-        }
-        
-        // 陪玩登录（新增设备绑定）
+        // 陪玩登录
         function playerLogin() {
             const inputPwd = document.getElementById('playerLoginPwd').value.trim();
             if (!inputPwd) {
                 alert('请输入登录密码');
                 return;
             }
-            
             const targetPlayer = playerList.find(player => player.password === inputPwd);
             if (targetPlayer) {
                 loginPlayer = targetPlayer;
-                // 绑定设备
                 const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
                 boundDevices[targetPlayer.id] = DEVICE_ID;
                 localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify(boundDevices));
@@ -1235,96 +1143,9 @@
             }
         }
         
-        // 解除设备绑定（管理员功能）
-        function unbindPlayerDevice() {
-            const playerId = document.getElementById('adminPlayerSelect').value;
-            if (!playerId) {
-                alert('请选择要解除绑定的陪玩');
-                return;
-            }
-            
-            const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
-            if (boundDevices[playerId]) {
-                delete boundDevices[playerId];
-                localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify(boundDevices));
-                
-                const targetPlayer = playerList.find(p => p.id === playerId);
-                alert(`✅ 已解除陪玩【${targetPlayer.name}】的设备绑定`);
-            } else {
-                alert('❌ 该陪玩未绑定任何设备');
-            }
-        }
-        
-        // 重置订单数据
-        function resetPlayerData() {
-            const playerId = document.getElementById('adminPlayerSelect').value;
-            if (!playerId) {
-                alert('请选择要重置的陪玩');
-                return;
-            }
-            
-            if (confirm('确定要重置该陪玩的所有订单数据吗？不可恢复！')) {
-                const targetPlayer = playerList.find(p => p.id === playerId);
-                targetPlayer.orders = [];
-                orderList = orderList.filter(order => order.playerId !== playerId);
-                saveDataToLocalStorage();
-                initAdminSelects();
-                alert(`✅ 陪玩【${targetPlayer.name}】数据已重置`);
-            }
-        }
-        
-        // 清除陪玩评价（管理员功能）
-        function clearPlayerRating() {
-            const playerId = document.getElementById('adminPlayerSelect').value;
-            if (!playerId) {
-                alert('请选择要清除评价的陪玩');
-                return;
-            }
-            
-            if (confirm('确定要清除该陪玩的所有评价记录吗？不可恢复！')) {
-                playerRatings[playerId] = {
-                    total: 0,
-                    good: 0,
-                    bad: 0,
-                    list: []
-                };
-                saveDataToLocalStorage();
-                const targetPlayer = playerList.find(p => p.id === playerId);
-                alert(`✅ 已清除陪玩【${targetPlayer.name}】的所有评价记录`);
-            }
-        }
-        
-        // 显示订单详情
-        function showOrderDetail(orderNo) {
-            const targetOrder = orderList.find(order => order.orderNo === orderNo);
-            if (!targetOrder) return;
-            
-            const detailHtml = `
-                订单号：${targetOrder.orderNo}<br>
-                服务类型：${targetOrder.service}<br>
-                老板联系方式：${targetOrder.bossContact}<br>
-                接单陪玩：${targetOrder.playerName || '未分配'}<br>
-                订单状态：${targetOrder.status === '待接单' ? '待接单' : targetOrder.status === '进行中' ? '接单中' : '已完成'}<br>
-                订单金额：${ORDER_AMOUNT}元<br>
-                创建时间：${targetOrder.createTime}
-                ${targetOrder.finishTime ? `<br>完成时间：${targetOrder.finishTime}` : ''}
-            `;
-            
-            document.getElementById('orderDetailContent').innerHTML = detailHtml;
-            document.getElementById('orderDetailModal').style.display = 'block';
-            document.getElementById('modalOverlay').style.display = 'block';
-        }
-        
-        // 关闭订单详情
-        function closeOrderDetail() {
-            document.getElementById('orderDetailModal').style.display = 'none';
-            document.getElementById('modalOverlay').style.display = 'none';
-        }
-        
         // 渲染陪玩订单列表
         function renderPlayerOrders() {
             if (!loginPlayer) return;
-            
             const waitOrders = orderList.filter(order => order.status === '待接单');
             const myOrders = loginPlayer.orders;
             const allOrders = [...myOrders, ...waitOrders];
@@ -1337,9 +1158,7 @@
             let orderHtml = '';
             allOrders.forEach(order => {
                 const isMyOrder = myOrders.some(o => o.orderNo === order.orderNo);
-                // 抢单按钮仅对非自己的待接单订单显示，且当前状态为在线
                 const showGrabBtn = !isMyOrder && order.status === '待接单' && loginPlayer.status === 'online';
-                // 结单按钮仅对自己的进行中订单显示
                 const showFinishBtn = isMyOrder && order.status === '进行中';
                 
                 orderHtml += `<div class="order-item" onclick="showOrderDetail('${order.orderNo}')">
@@ -1358,23 +1177,17 @@
             document.getElementById('playerOrderList').innerHTML = orderHtml;
         }
         
-        // 陪玩抢单（优化：所有待接单均可抢，抢单后不可再抢）
+        // 陪玩抢单
         function grabPlayerOrder(orderNo) {
-            if (!loginPlayer) return;
-            
-            // 检查当前状态是否为在线
             if (loginPlayer.status !== 'online') {
                 alert('❌ 你当前不在线，无法抢单');
                 return;
             }
-            
-            // 检查是否已有进行中的订单
             const hasDoingOrder = loginPlayer.orders.some(o => o.status === '进行中');
             if (hasDoingOrder) {
-                alert('❌ 你已有进行中的订单，需结单后才能再次抢单');
+                alert('❌ 你已有进行中的订单，需结单后再抢新单');
                 return;
             }
-            
             const targetOrder = orderList.find(order => order.orderNo === orderNo && order.status === '待接单');
             if (!targetOrder) {
                 alert('❌ 订单已被抢或不存在');
@@ -1382,12 +1195,11 @@
                 return;
             }
             
-            // 抢单成功，更新订单状态和陪玩状态
             targetOrder.status = '进行中';
             targetOrder.playerId = loginPlayer.id;
             targetOrder.playerName = loginPlayer.name;
             loginPlayer.orders.push(targetOrder);
-            loginPlayer.status = 'busy'; // 自动切换为接单中状态
+            loginPlayer.status = 'busy';
             
             saveDataToLocalStorage();
             updatePlayerStatusDisplay();
@@ -1399,7 +1211,7 @@
             alert(`✅ 抢单成功！\n订单号：${orderNo}\n金额：${ORDER_AMOUNT}元`);
         }
         
-        // 陪玩结单（仅更新状态，不触发评价）
+        // 陪玩结单
         function finishPlayerOrder(orderNo) {
             const targetOrder = orderList.find(order => order.orderNo === orderNo && order.playerId === loginPlayer.id);
             if (!targetOrder) {
@@ -1408,15 +1220,9 @@
             }
             
             if (confirm('确定要结单吗？结单后老板将进行评价，评价完成后金额计入可提款！')) {
-                // 更新订单状态
                 targetOrder.status = '已完成';
                 targetOrder.finishTime = new Date().toLocaleString();
-                
-                // 更新陪玩状态为在线
                 loginPlayer.status = 'online';
-                updatePlayerStatusDisplay();
-                
-                // 从陪玩订单列表移除
                 loginPlayer.orders = loginPlayer.orders.filter(o => o.orderNo !== orderNo);
                 
                 saveDataToLocalStorage();
@@ -1430,13 +1236,108 @@
             }
         }
         
-        // 老板端提交评价（外部调用接口，陪玩端仅展示）
+        // 其他核心函数（保持原有逻辑，确保功能正常）
+        function checkBoundDevice() {
+            const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
+            for (const [playerId, deviceId] of Object.entries(boundDevices)) {
+                if (deviceId === DEVICE_ID) {
+                    const targetPlayer = playerList.find(p => p.id === playerId);
+                    if (targetPlayer) {
+                        loginPlayer = targetPlayer;
+                        document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+                        document.querySelector('.player-function-panel').classList.add('active');
+                        document.getElementById('playerAvatar').src = targetPlayer.avatar;
+                        document.getElementById('playerName').innerText = targetPlayer.name;
+                        updatePlayerStatusDisplay();
+                        renderPlayerOrders();
+                        initPlayerChatSelect();
+                        renderPlayerRatings();
+                        renderWithdrawBalance();
+                        renderWithdrawRecords();
+                        
+                        alert(`✅ 设备已绑定，${targetPlayer.name}自动登录成功！`);
+                        return;
+                    }
+                }
+            }
+            document.getElementById('playerBindTip').style.display = 'none';
+        }
+        
+        function unbindPlayerDevice() {
+            const playerId = document.getElementById('adminPlayerSelect').value;
+            if (!playerId) {
+                alert('请选择要解除绑定的陪玩');
+                return;
+            }
+            const boundDevices = JSON.parse(localStorage.getItem(STORAGE_KEYS.boundDevices) || '{}');
+            if (boundDevices[playerId]) {
+                delete boundDevices[playerId];
+                localStorage.setItem(STORAGE_KEYS.boundDevices, JSON.stringify(boundDevices));
+                const targetPlayer = playerList.find(p => p.id === playerId);
+                alert(`✅ 已解除陪玩【${targetPlayer.name}】的设备绑定`);
+            } else {
+                alert('❌ 该陪玩未绑定任何设备');
+            }
+        }
+        
+        function resetPlayerData() {
+            const playerId = document.getElementById('adminPlayerSelect').value;
+            if (!playerId) {
+                alert('请选择要重置的陪玩');
+                return;
+            }
+            if (confirm('确定要重置该陪玩的所有订单数据吗？不可恢复！')) {
+                const targetPlayer = playerList.find(p => p.id === playerId);
+                targetPlayer.orders = [];
+                orderList = orderList.filter(order => order.playerId !== playerId);
+                saveDataToLocalStorage();
+                initAdminSelects();
+                alert(`✅ 陪玩【${targetPlayer.name}】数据已重置`);
+            }
+        }
+        
+        function clearPlayerRating() {
+            const playerId = document.getElementById('adminPlayerSelect').value;
+            if (!playerId) {
+                alert('请选择要清除评价的陪玩');
+                return;
+            }
+            if (confirm('确定要清除该陪玩的所有评价记录吗？不可恢复！')) {
+                playerRatings[playerId] = { total: 0, good: 0, bad: 0, list: [] };
+                saveDataToLocalStorage();
+                const targetPlayer = playerList.find(p => p.id === playerId);
+                alert(`✅ 已清除陪玩【${targetPlayer.name}】的所有评价记录`);
+            }
+        }
+        
+        function showOrderDetail(orderNo) {
+            const targetOrder = orderList.find(order => order.orderNo === orderNo);
+            if (!targetOrder) return;
+            const detailHtml = `
+                订单号：${targetOrder.orderNo}<br>
+                服务类型：${targetOrder.service}<br>
+                老板联系方式：${targetOrder.bossContact}<br>
+                接单陪玩：${targetOrder.playerName || '未分配'}<br>
+                订单状态：${targetOrder.status === '待接单' ? '待接单' : targetOrder.status === '进行中' ? '接单中' : '已完成'}<br>
+                订单金额：${ORDER_AMOUNT}元<br>
+                创建时间：${targetOrder.createTime}
+                ${targetOrder.finishTime ? `<br>完成时间：${targetOrder.finishTime}` : ''}
+            `;
+            document.getElementById('orderDetailContent').innerHTML = detailHtml;
+            document.getElementById('orderDetailModal').style.display = 'block';
+            document.getElementById('modalOverlay').style.display = 'block';
+        }
+        
+        function closeOrderDetail() {
+            document.getElementById('orderDetailModal').style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+        
         function submitRating() {
             if (selectedRatingStar === 0) {
                 alert('请选择评价星级');
                 return;
             }
-            
             const content = document.getElementById('ratingContent').value.trim() || '无评价内容';
             const targetOrder = orderList.find(order => order.orderNo === currentRatingOrder);
             if (!targetOrder || !targetOrder.playerId) {
@@ -1444,8 +1345,6 @@
                 closeRatingModal();
                 return;
             }
-            
-            // 记录评价
             const playerId = targetOrder.playerId;
             const isGoodRating = selectedRatingStar >= 4;
             playerRatings[playerId].total++;
@@ -1457,34 +1356,24 @@
                 isGood: isGoodRating,
                 time: new Date().toLocaleString()
             });
-            
-            // 订单金额计入陪玩可提款余额
             playerBalances[playerId] = (playerBalances[playerId] + ORDER_AMOUNT).toFixed(2);
-            
             saveDataToLocalStorage();
             closeRatingModal();
-            
-            // 通知陪玩
             addPlayerNotification(`✅ 订单${currentRatingOrder}已收到老板评价！\n评价：${isGoodRating ? '好评' : '差评'}（${selectedRatingStar}星）\n金额${ORDER_AMOUNT}元已计入可提款`, currentRatingOrder);
             sendAdminNotification(`【老板评价】\n订单号：${currentRatingOrder}\n陪玩：${targetOrder.playerName}\n评价：${isGoodRating ? '好评' : '差评'}（${selectedRatingStar}星）\n金额：${ORDER_AMOUNT}元`);
-            
             alert('✅ 评价提交成功！金额已计入陪玩可提款余额');
         }
         
-        // 渲染陪玩评价
         function renderPlayerRatings() {
             if (!loginPlayer) return;
-            
             const ratings = playerRatings[loginPlayer.id];
             document.getElementById('goodRatingCount').innerText = ratings.good;
             document.getElementById('badRatingCount').innerText = ratings.bad;
             document.getElementById('totalRatingCount').innerText = ratings.total;
-            
             if (ratings.list.length === 0) {
                 document.getElementById('playerRatingList').innerHTML = '<div class="empty-tip">暂无老板评价</div>';
                 return;
             }
-            
             let ratingHtml = '';
             ratings.list.forEach(rating => {
                 ratingHtml += `<div class="rating-item">
@@ -1497,24 +1386,19 @@
             document.getElementById('playerRatingList').innerHTML = ratingHtml;
         }
         
-        // 渲染可提款余额
         function renderWithdrawBalance() {
             if (!loginPlayer) return;
-            
             const balance = playerBalances[loginPlayer.id] || 0;
             document.getElementById('withdrawBalance').innerText = balance;
         }
         
-        // 渲染提款记录
         function renderWithdrawRecords() {
             if (!loginPlayer) return;
-            
             const records = playerWithdrawRecords[loginPlayer.id] || [];
             if (records.length === 0) {
                 document.getElementById('withdrawRecordList').innerHTML = '<div class="empty-tip">暂无提款记录</div>';
                 return;
             }
-            
             let recordHtml = '';
             records.forEach(record => {
                 let statusClass = '';
@@ -1533,7 +1417,6 @@
                         statusText = '已拒绝';
                         break;
                 }
-                
                 recordHtml += `<div class="withdraw-record-item">
                     ${record.time} | ${record.amount}元
                     <span class="withdraw-record-status ${statusClass}">${statusText}</span>
@@ -1542,62 +1425,47 @@
             document.getElementById('withdrawRecordList').innerHTML = recordHtml;
         }
         
-        // 提交提款申请
         function submitWithdraw() {
             if (!loginPlayer) return;
-            
             const inputAmount = document.getElementById('withdrawAmount').value.trim();
             const amount = parseFloat(inputAmount);
             const balance = parseFloat(playerBalances[loginPlayer.id] || 0);
-            
             if (isNaN(amount) || amount <= 0) {
                 alert('请输入有效的提款金额');
                 return;
             }
-            
             if (amount > balance) {
                 alert(`❌ 提款金额不能超过可提款余额（${balance}元）`);
                 return;
             }
-            
-            // 创建提款记录
             const record = {
                 id: Date.now(),
                 amount: amount.toFixed(2),
                 time: new Date().toLocaleString(),
-                status: 'pending' // pending-待审核，approved-已通过，rejected-已拒绝
+                status: 'pending'
             };
-            
             playerWithdrawRecords[loginPlayer.id].unshift(record);
             saveDataToLocalStorage();
-            
             renderWithdrawRecords();
             document.getElementById('withdrawAmount').value = '';
-            
             addPlayerNotification(`✅ 提款申请提交成功！\n金额：${amount.toFixed(2)}元\n状态：待管理员审核`, 'withdraw');
             sendAdminNotification(`【提款申请】\n陪玩：${loginPlayer.name}\n金额：${amount.toFixed(2)}元\n时间：${record.time}`);
-            
             alert(`✅ 提款申请已提交！\n金额：${amount.toFixed(2)}元\n等待管理员审核`);
         }
         
-        // 更新陪玩状态
         function updatePlayerStatus(status) {
             if (!loginPlayer) return;
-            
-            // 若有进行中的订单，不可切换为在线/不在线（仅能保持接单中）
             const hasDoingOrder = loginPlayer.orders.some(o => o.status === '进行中');
             if (hasDoingOrder && status !== 'busy') {
                 alert('❌ 你有进行中的订单，无法切换为该状态');
                 return;
             }
-            
             loginPlayer.status = status;
             updatePlayerStatusDisplay();
             saveDataToLocalStorage();
             sendAdminNotification(`【陪玩状态更新】\n陪玩：${loginPlayer.name}\n新状态：${getStatusText(status)}`);
         }
         
-        // 更新陪玩状态显示
         function updatePlayerStatusDisplay() {
             const statusText = getStatusText(loginPlayer.status);
             const statusColor = { online: '#00ff00', busy: '#ff6600', offline: '#888' };
@@ -1605,14 +1473,141 @@
             document.getElementById('playerStatus').style.color = statusColor[loginPlayer.status];
         }
         
-        // 获取状态文本
         function getStatusText(status) {
             const statusMap = { online: '在线', busy: '接单中', offline: '不在线' };
             return statusMap[status] || '在线';
         }
         
-        // 初始化陪玩聊天选择框
         function initPlayerChatSelect() {
             if (!loginPlayer) return;
-            
-           
+            const doingOrders = loginPlayer.orders.filter(order => order.status === '进行中');
+            if (doingOrders.length === 0) {
+                document.getElementById('playerChatSelect').innerHTML = '<option value="">选择已接单的订单</option>';
+                document.getElementById('playerChatSelect').disabled = true;
+                document.getElementById('playerChatInput').disabled = true;
+                document.querySelector('.chat-send-btn').disabled = true;
+                document.getElementById('playerChatList').innerHTML = '<div class="empty-tip">暂无可沟通的订单</div>';
+                currentChatOrder = '';
+                return;
+            }
+            let selectHtml = '<option value="">选择已接单的订单</option>';
+            doingOrders.forEach(order => {
+                selectHtml += `<option value="${order.orderNo}">${order.orderNo}（${order.service}）</option>`;
+            });
+            document.getElementById('playerChatSelect').innerHTML = selectHtml;
+            document.getElementById('playerChatSelect').disabled = false;
+        }
+        
+        document.getElementById('playerChatSelect').addEventListener('change', function() {
+            const orderNo = this.value;
+            if (!orderNo) {
+                document.getElementById('playerChatInput').disabled = true;
+                document.getElementById('playerChatInput').placeholder = '选择订单后沟通...';
+                document.querySelector('.chat-send-btn').disabled = true;
+                document.getElementById('playerChatList').innerHTML = '<div class="empty-tip">选择订单后即可与老板沟通</div>';
+                currentChatOrder = '';
+                return;
+            }
+            currentChatOrder = orderNo;
+            const targetOrder = orderList.find(order => order.orderNo === orderNo);
+            if (targetOrder) {
+                document.getElementById('playerChatInput').disabled = false;
+                document.getElementById('playerChatInput').placeholder = '输入消息...';
+                document.querySelector('.chat-send-btn').disabled = false;
+                renderChatRecords(targetOrder.chatRecords || []);
+            }
+        });
+        
+        function sendPlayerMessage() {
+            const content = document.getElementById('playerChatInput').value.trim();
+            if (!content || !currentChatOrder) return;
+            if (checkForbiddenWords(content)) {
+                const violationCount = ++playerViolations[loginPlayer.id].count;
+                if (violationCount >= 2) {
+                    alert(`❌ 消息包含违规内容\n⚠️ 二次违规！需缴纳${VIOLATION_FINE}元罚款`);
+                    sendAdminNotification(`【陪玩违规】\n陪玩：${loginPlayer.name}\n违规次数：${violationCount}次\n内容：${content}`);
+                } else {
+                    alert('❌ 消息包含违规内容\n⚠️ 首次警告');
+                }
+                document.getElementById('playerChatInput').value = '';
+                saveDataToLocalStorage();
+                return;
+            }
+            const targetOrder = orderList.find(order => order.orderNo === currentChatOrder);
+            if (!targetOrder) {
+                alert('订单已失效');
+                return;
+            }
+            if (!targetOrder.chatRecords) targetOrder.chatRecords = [];
+            const message = {
+                sender: 'player',
+                senderName: loginPlayer.name,
+                content,
+                time: new Date().toLocaleString()
+            };
+            targetOrder.chatRecords.push(message);
+            renderChatRecords(targetOrder.chatRecords);
+            sendAdminNotification(`【陪玩消息】\n订单号：${targetOrder.orderNo}\n消息：${content}`);
+            document.getElementById('playerChatInput').value = '';
+            saveDataToLocalStorage();
+        }
+        
+        function addPlayerNotification(content, orderNo) {
+            playerNotifications.unshift({
+                id: Date.now(),
+                content,
+                orderNo: orderNo || 'system',
+                time: new Date().toLocaleString(),
+                isRead: false
+            });
+            loginPlayer.unreadNotify++;
+            renderPlayerNotifications();
+        }
+        
+        function renderPlayerNotifications() {
+            const unreadCount = playerNotifications.filter(notify => !notify.isRead).length;
+            document.getElementById('playerNotifyCount').innerText = unreadCount;
+            if (playerNotifications.length === 0) {
+                document.getElementById('playerNotifyList').innerHTML = '<div class="empty-tip">暂无新消息</div>';
+                return;
+            }
+            let notifyHtml = '';
+            playerNotifications.forEach(notify => {
+                notifyHtml += `<div class="notify-item ${notify.isRead ? '' : 'unread-notify'}" onclick="markNotifyAsRead(${notify.id})">
+                    ${notify.content}
+                    <div class="notify-time">${notify.time} | 订单号：${notify.orderNo}</div>
+                </div>`;
+            });
+            document.getElementById('playerNotifyList').innerHTML = notifyHtml;
+        }
+        
+        function markNotifyAsRead(notifyId) {
+            const notify = playerNotifications.find(n => n.id === notifyId);
+            if (notify) notify.isRead = true;
+            renderPlayerNotifications();
+        }
+        
+        function switchAdminSubmodule(submoduleId) {
+            document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.admin-submodule').forEach(module => module.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(submoduleId + 'Submodule').classList.add('active');
+        }
+        
+        function initAdminSelects() {
+            let playerSelectHtml = '<option value="">请选择要管理的陪玩</option>';
+            let violationSelectHtml = '<option value="">请选择违规陪玩</option>';
+            playerList.forEach(player => {
+                playerSelectHtml += `<option value="${player.id}">${player.name}</option>`;
+                violationSelectHtml += `<option value="${player.id}">${player.name}（违规：${playerViolations[player.id].count}次）</option>`;
+            });
+            document.getElementById('adminPlayerSelect').innerHTML = playerSelectHtml;
+            document.getElementById('violationPlayerSelect').innerHTML = violationSelectHtml;
+        }
+        
+        function updatePlayerPassword() {
+            const playerId = document.getElementById('adminPlayerSelect').value;
+            const newPwd = document.getElementById('newPlayerPwd').value.trim();
+            if (!playerId || !newPwd) {
+                alert('请选择陪玩并输入新密码');
+               
